@@ -1,440 +1,355 @@
-﻿using Google.OrTools.Sat;
+﻿using System.Text;
+using Google.OrTools.Sat;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace SchedulePlanner
 {
     internal static class Program
     {
-        private static List<ILiteral> NegatedBoundedSpan(
-            IReadOnlyList<BoolVar> works,
-            int start,
-            int length)
+        public static async Task Main(string[] args)
         {
-            var sequence = new List<ILiteral>();
-            if (start > 0)
-            {
-                sequence.Add(works[start - 1]);
-            }
-
-            for (var i = 0; i < length; ++i)
-            {
-                sequence.Add(works[start + i].Not());
-            }
-
-            if (start + length < works.Count)
-            {
-                sequence.Add(works[start + length]);
-            }
-
-            return sequence;
-        }
-
-        private static (List<BoolVar> variables, List<int> coefficients) AddSoftSequenceConstraint(
-            CpModel model,
-            IReadOnlyList<BoolVar> works,
-            int hardMin,
-            int softMin,
-            int minCost,
-            int softMax,
-            int hardMax,
-            int maxCost,
-            string prefix)
-        {
-            var costVars = new List<BoolVar>();
-            var costCoeffs = new List<int>();
-
-            for (var length = 1; length < hardMin; ++length)
-            {
-                for (var start = 0; start <= works.Count - length; ++start)
+            using var host = Host.CreateDefaultBuilder(args)
+                .ConfigureHostConfiguration(config =>
                 {
-                    model.AddBoolOr(NegatedBoundedSpan(works, start, length));
-                }
-            }
-
-            if (minCost > 0)
-            {
-                for (var length = hardMin; length < softMin; ++length)
+                    config.AddEnvironmentVariables(prefix: "SCHED_");
+                })
+                .ConfigureAppConfiguration((context, config) =>
                 {
-                    for (var start = 0; start <= works.Count - length; ++start)
-                    {
-                        var span = NegatedBoundedSpan(works, start, length);
-                        var name = $": under_span(start={start}, length={length})";
-                        var lit = model.NewBoolVar(prefix + name);
-                        span.Add(lit);
-                        model.AddBoolOr(span);
-                        costVars.Add(lit);
-                        costCoeffs.Add(minCost * (softMin - length));
-                    }
-                }
-            }
-
-            if (maxCost > 0)
-            {
-                for (var length = softMax + 1; length <= hardMax; ++length)
+                    config.AddCommandLine(args);
+                    config.SetBasePath(Directory.GetCurrentDirectory());
+                    config.AddJsonFile("appsettings.json");
+                })
+                .ConfigureServices((context, services) =>
                 {
-                    for (var start = 0; start <= works.Count - length; ++start)
-                    {
-                        var span = NegatedBoundedSpan(works, start, length);
-                        var name = $": over_span(start={start}, length={length})";
-                        var lit = model.NewBoolVar(prefix + name);
-                        span.Add(lit);
-                        model.AddBoolOr(span);
-                        costVars.Add(lit);
-                        costCoeffs.Add(maxCost * (length - softMax));
-                    }
-                }
-            }
-
-            for (var start = 0; start <= works.Count - hardMax - 1; ++start)
-            {
-                var sequence = new List<ILiteral>();
-                for (var i = start; i < start + hardMax + 1; ++i)
+                    services.Configure<SchedulerConfig>(context.Configuration.GetSection("Scheduler"));
+                    services.AddSingleton<SchedulingService>();
+                })
+                .ConfigureLogging(logging =>
                 {
-                    sequence.Add(works[i].Not());
-                }
-
-                model.AddBoolOr(sequence);
-            }
-
-            return (costVars, costCoeffs);
-        }
-
-        private static (List<IntVar> variables, List<int> coefficients) AddSoftSumConstraint(
-            CpModel model,
-            IReadOnlyList<BoolVar> works,
-            int hardMin,
-            int softMin,
-            int minCost,
-            int softMax,
-            int hardMax,
-            int maxCost,
-            string prefix)
-        {
-            var costVars = new List<IntVar>();
-            var costCoeffs = new List<int>();
-            var sumVar = model.NewIntVar(hardMin, hardMax, "");
-            model.Add(sumVar == LinearExpr.Sum(works));
-
-            if (softMin > hardMin && minCost > 0)
-            {
-                var delta = model.NewIntVar(-works.Count, works.Count, "");
-                model.Add(delta == softMin - sumVar);
-                var excess = model.NewIntVar(0, works.Count, prefix + ": under_sum");
-                model.AddMaxEquality(excess, new[] { delta, model.NewConstant(0) });
-                costVars.Add(excess);
-                costCoeffs.Add(minCost);
-            }
-
-            if (softMax < hardMax && maxCost > 0)
-            {
-                var delta = model.NewIntVar(-works.Count, works.Count, "");
-                model.Add(delta == sumVar - softMax);
-                var excess = model.NewIntVar(0, works.Count, prefix + ": over_sum");
-                model.AddMaxEquality(excess, new[] { delta, model.NewConstant(0) });
-                costVars.Add(excess);
-                costCoeffs.Add(maxCost);
-            }
-
-            return (costVars, costCoeffs);
-        }
-
-        private static void SolveShiftScheduling(string parameters, string outputProto)
-        {
-            const int numEmployees = 8;
-            const int numWeeks = 3;
-            // O=Off, M=Morning, A=Afternoon, N=Night
-            var shifts = new[] { "O", "M", "A", "N" };
-
-            var fixedAssignments = new (int employee, int shift, int day)[]
-            {
-                (0, 0, 0),
-                (1, 0, 0),
-                (2, 1, 0),
-                (3, 1, 0),
-                (4, 2, 0),
-                (5, 2, 0),
-                (6, 2, 3),
-                (7, 3, 0),
-                (0, 1, 1),
-                (1, 1, 1),
-                (2, 2, 1),
-                (3, 2, 1),
-                (4, 2, 1),
-                (5, 0, 1),
-                (6, 0, 1),
-                (7, 3, 1),
-            };
-
-            var requests = new (int employee, int shift, int day, int weight)[]
-            {
-                (3, 0, 5, -2),
-                (5, 3, 10, -2),
-                (2, 3, 4, 4),
-            };
-
-            var shiftConstraints = new (int shift, int hardMin, int softMin, int minCost, int softMax, int hardMax, int maxCost)[]
-            {
-                (0, 1, 1, 0, 2, 2, 0),
-                (3, 1, 2, 20, 3, 4, 5),
-            };
-
-            var weeklySumConstraints = new (int shift, int hardMin, int softMin, int minCost, int softMax, int hardMax, int maxCost)[]
-            {
-                (0, 1, 2, 7, 2, 3, 4),
-                (3, 0, 1, 3, 4, 4, 0),
-            };
-
-            var penalizedTransitions = new (int previousShift, int nextShift, int penalty)[]
-            {
-                (2, 3, 4),
-                (3, 1, 0),
-            };
-
-            var weeklyCoverDemands = new (int morning, int afternoon, int night)[]
-            {
-                (2, 3, 1),
-                (2, 3, 1),
-                (2, 2, 2),
-                (2, 3, 1),
-                (2, 2, 2),
-                (1, 2, 3),
-                (1, 3, 1),
-            };
-
-            var excessCoverPenalties = new[] { 2, 2, 5 };
-
-            var numDays = numWeeks * 7;
-            var numShifts = shifts.Length;
-
-            var model = new CpModel();
-
-            var work = new BoolVar[numEmployees, numShifts, numDays];
-            for (var e = 0; e < numEmployees; ++e)
-                for (var s = 0; s < numShifts; ++s)
-                    for (var d = 0; d < numDays; ++d)
+                    logging.ClearProviders();
+                    logging.AddSimpleConsole(options =>
                     {
-                        work[e, s, d] = model.NewBoolVar($"work{e}_{s}_{d}");
-                    }
+                        options.SingleLine = false;
+                        options.TimestampFormat = "[HH:mm:ss] ";
+                    });
+                })
+                .Build();
 
-            var objBoolVars = new List<BoolVar>();
-            var objBoolCoeffs = new List<int>();
-            var objIntVars = new List<IntVar>();
-            var objIntCoeffs = new List<int>();
+            var scheduler = host.Services.GetRequiredService<SchedulingService>();
+            await scheduler.RunAsync();
 
-            for (var e = 0; e < numEmployees; ++e)
-                for (var d = 0; d < numDays; ++d)
-                {
-                    var dailyAssignments = new List<ILiteral>();
-                    for (var s = 0; s < numShifts; ++s)
-                    {
-                        dailyAssignments.Add(work[e, s, d]);
-                    }
-
-                    model.AddExactlyOne(dailyAssignments);
-                }
-
-            foreach (var (employee, shift, day) in fixedAssignments)
-            {
-                model.Add(work[employee, shift, day] == 1);
-            }
-
-            foreach (var (employee, shift, day, weight) in requests)
-            {
-                objBoolVars.Add(work[employee, shift, day]);
-                objBoolCoeffs.Add(weight);
-            }
-
-            foreach (var ct in shiftConstraints)
-            {
-                var (shift, hardMin, softMin, minCost, softMax, hardMax, maxCost) = ct;
-                for (var e = 0; e < numEmployees; ++e)
-                {
-                    var works = Enumerable.Range(0, numDays)
-                        .Select(d => work[e, shift, d])
-                        .ToList();
-                    var (vars, coeffs) = AddSoftSequenceConstraint(
-                        model,
-                        works,
-                        hardMin,
-                        softMin,
-                        minCost,
-                        softMax,
-                        hardMax,
-                        maxCost,
-                        $"shift_constraint(employee {e}, shift {shift})");
-                    objBoolVars.AddRange(vars);
-                    objBoolCoeffs.AddRange(coeffs);
-                }
-            }
-
-            foreach (var ct in weeklySumConstraints)
-            {
-                var (shift, hardMin, softMin, minCost, softMax, hardMax, maxCost) = ct;
-                for (var e = 0; e < numEmployees; ++e)
-                    for (var w = 0; w < numWeeks; ++w)
-                    {
-                        var works = Enumerable.Range(0, 7)
-                            .Select(d => work[e, shift, d + w * 7])
-                            .ToList();
-                        var (vars, coeffs) = AddSoftSumConstraint(
-                            model,
-                            works,
-                            hardMin,
-                            softMin,
-                            minCost,
-                            softMax,
-                            hardMax,
-                            maxCost,
-                            $"weekly_sum_constraint(employee {e}, shift {shift}, week {w})");
-                        objIntVars.AddRange(vars);
-                        objIntCoeffs.AddRange(coeffs);
-                    }
-            }
-
-            foreach (var (previousShift, nextShift, cost) in penalizedTransitions)
-            {
-                for (var e = 0; e < numEmployees; ++e)
-                    for (var d = 0; d < numDays - 1; ++d)
-                    {
-                        var transition = new List<ILiteral>
-                    {
-                        work[e, previousShift, d].Not(),
-                        work[e, nextShift, d + 1].Not()
-                    };
-
-                        if (cost == 0)
-                        {
-                            model.AddBoolOr(transition);
-                        }
-                        else
-                        {
-                            var transVar = model.NewBoolVar($"transition (employee={e}, day={d})");
-                            transition.Add(transVar);
-                            model.AddBoolOr(transition);
-                            objBoolVars.Add(transVar);
-                            objBoolCoeffs.Add(cost);
-                        }
-                    }
-            }
-
-            for (var s = 1; s < numShifts; ++s)
-                for (var w = 0; w < numWeeks; ++w)
-                    for (var d = 0; d < 7; ++d)
-                    {
-                        var works = Enumerable.Range(0, numEmployees)
-                            .Select(e => work[e, s, w * 7 + d])
-                            .ToList();
-
-                        var minDemand = s switch
-                        {
-                            1 => weeklyCoverDemands[d].morning,
-                            2 => weeklyCoverDemands[d].afternoon,
-                            3 => weeklyCoverDemands[d].night,
-                            _ => throw new ArgumentOutOfRangeException()
-                        };
-
-                        var worked = model.NewIntVar(minDemand, numEmployees, "");
-                        model.Add(worked == LinearExpr.Sum(works));
-                        var overPenalty = excessCoverPenalties[s - 1];
-                        if (overPenalty > 0)
-                        {
-                            var name = $"excess_demand(shift={s}, week={w}, day={d})";
-                            var excess = model.NewIntVar(0, numEmployees - minDemand, name);
-                            model.Add(excess == worked - minDemand);
-                            objIntVars.Add(excess);
-                            objIntCoeffs.Add(overPenalty);
-                        }
-                    }
-
-            var objective = new List<LinearExpr>();
-            var objectiveCoeffs = new List<int>();
-
-            objective.AddRange(objBoolVars);
-            objectiveCoeffs.AddRange(objBoolCoeffs);
-
-            objective.AddRange(objIntVars);
-            objectiveCoeffs.AddRange(objIntCoeffs);
-
-            var linearObjective = LinearExpr.WeightedSum(objective, objectiveCoeffs);
-            model.Minimize(linearObjective);
-
-            if (!string.IsNullOrEmpty(outputProto))
-            {
-                Console.WriteLine($"Writing proto to {outputProto}");
-                File.WriteAllText(outputProto, model.ToString());
-            }
-
-            var solver = new CpSolver();
-            if (!string.IsNullOrEmpty(parameters))
-            {
-                solver.StringParameters = parameters;
-            }
-
-            var status = solver.Solve(model);
-
-            if (status == CpSolverStatus.Optimal || status == CpSolverStatus.Feasible)
-            {
-                Console.WriteLine();
-                var header = "          ";
-                for (var w = 0; w < numWeeks; ++w)
-                {
-                    header += "M T W T F S S ";
-                }
-
-                Console.WriteLine(header);
-                for (var e = 0; e < numEmployees; ++e)
-                {
-                    var schedule = string.Empty;
-                    for (var d = 0; d < numDays; ++d)
-                        for (var s = 0; s < numShifts; ++s)
-                        {
-                            if (solver.BooleanValue(work[e, s, d]))
-                            {
-                                schedule += $"{shifts[s]} ";
-                            }
-                        }
-
-                    Console.WriteLine($"worker {e}: {schedule}");
-                }
-
-                Console.WriteLine();
-                Console.WriteLine("Penalties:");
-                for (var i = 0; i < objBoolVars.Count; ++i)
-                {
-                    if (solver.BooleanValue(objBoolVars[i]))
-                    {
-                        var penalty = objBoolCoeffs[i];
-                        if (penalty > 0)
-                        {
-                            Console.WriteLine($"  {objBoolVars[i].Name()} violated, penalty={penalty}");
-                        }
-                        else
-                        {
-                            Console.WriteLine($"  {objBoolVars[i].Name()} fulfilled, gain={-penalty}");
-                        }
-                    }
-                }
-
-                for (var i = 0; i < objIntVars.Count; ++i)
-                {
-                    if (solver.Value(objIntVars[i]) > 0)
-                    {
-                        Console.WriteLine(
-                            $"  {objIntVars[i].Name()} violated by {solver.Value(objIntVars[i])}, "
-                            + $"linear penalty={objIntCoeffs[i]}");
-                    }
-                }
-            }
-
-            Console.WriteLine();
-            Console.WriteLine(solver.ResponseStats());
-        }
-
-        private static void Main(string[] args)
-        {
-            var parameters = args.Length > 0 ? args[0] : "max_time_in_seconds:10.0";
-            var outputProto = args.Length > 1 ? args[1] : string.Empty;
-            SolveShiftScheduling(parameters, outputProto);
-            Console.ReadLine();
+            Console.WriteLine("Press any key to exit...");
+            Console.ReadKey();
         }
     }
+
+    public sealed class SchedulingService
+    {
+        private readonly ILogger<SchedulingService> _logger;
+        private readonly SchedulerConfig _config;
+
+        public SchedulingService(ILogger<SchedulingService> logger, IOptions<SchedulerConfig> config)
+        {
+            _logger = logger;
+            _config = config.Value;
+        }
+
+        public Task RunAsync()
+        {
+            Solve();
+            return Task.CompletedTask;
+        }
+
+        private void Solve()
+        {
+            ValidateConfig();
+
+            _logger.LogInformation("Building timetable for {Days} days with {Blocks} blocks per day.",
+                _config.Days.Count, _config.BlocksPerDay);
+
+            var classes = _config.Classes
+                .Select((cls, idx) => new ClassEntry(cls, idx))
+                .ToList();
+
+            var model = new CpModel();
+            var numDays = _config.Days.Count;
+            var blocksPerDay = _config.BlocksPerDay;
+
+            var assignment = new BoolVar[classes.Count, numDays, blocksPerDay];
+            for (var cls = 0; cls < classes.Count; ++cls)
+            for (var day = 0; day < numDays; ++day)
+            for (var block = 0; block < blocksPerDay; ++block)
+            {
+                assignment[cls, day, block] = model.NewBoolVar(
+                    $"assign_{classes[cls].Config.Id}_day{day}_block{block}");
+            }
+
+            foreach (var entry in classes)
+            {
+                var linear = new List<BoolVar>();
+                for (var day = 0; day < numDays; ++day)
+                for (var block = 0; block < blocksPerDay; ++block)
+                {
+                    linear.Add(assignment[entry.Index, day, block]);
+                }
+
+                if (entry.Config.WeeklyBlocks > numDays * blocksPerDay)
+                {
+                    throw new InvalidOperationException(
+                        $"Class {entry.Config.Id} demands more blocks than available.");
+                }
+
+                model.Add(LinearExpr.Sum(linear) == entry.Config.WeeklyBlocks);
+            }
+
+            var teacherGroups = classes
+                .GroupBy(c => c.Config.Teacher)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            foreach (var teacherClasses in teacherGroups.Values)
+            {
+                for (var day = 0; day < numDays; ++day)
+                for (var block = 0; block < blocksPerDay; ++block)
+                {
+                    var slots = teacherClasses
+                        .Select(entry => assignment[entry.Index, day, block])
+                        .ToList();
+
+                    if (slots.Count > 1)
+                    {
+                        model.AddAtMostOne(slots);
+                    }
+                }
+            }
+
+            var roomGroups = classes
+                .GroupBy(c => c.Config.Room)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            foreach (var roomClasses in roomGroups.Values)
+            {
+                for (var day = 0; day < numDays; ++day)
+                for (var block = 0; block < blocksPerDay; ++block)
+                {
+                    var slots = roomClasses
+                        .Select(entry => assignment[entry.Index, day, block])
+                        .ToList();
+
+                    if (slots.Count > 1)
+                    {
+                        model.AddAtMostOne(slots);
+                    }
+                }
+            }
+
+            var transitionPenalties = new List<RoomChangePenalty>();
+            for (var day = 0; day < numDays; ++day)
+            for (var block = 0; block < blocksPerDay - 1; ++block)
+            {
+                foreach (var teacher in teacherGroups)
+                {
+                    var entries = teacher.Value;
+                    foreach (var current in entries)
+                    foreach (var next in entries)
+                    {
+                        if (current.Config.Room == next.Config.Room)
+                        {
+                            continue;
+                        }
+
+                        var penaltyVar = model.NewBoolVar(
+                            $"room_change_{teacher.Key}_day{day}_block{block}");
+
+                        model.Add(penaltyVar <= assignment[current.Index, day, block]);
+                        model.Add(penaltyVar <= assignment[next.Index, day, block + 1]);
+                        model.Add(penaltyVar >= assignment[current.Index, day, block]
+                                             + assignment[next.Index, day, block + 1]
+                                             - 1);
+
+                        transitionPenalties.Add(new RoomChangePenalty(
+                            penaltyVar,
+                            teacher.Key,
+                            _config.Days[day],
+                            block,
+                            current.Config.Id,
+                            current.Config.Room,
+                            next.Config.Id,
+                            next.Config.Room));
+                    }
+                }
+            }
+
+            var objVars = transitionPenalties.Select(p => p.Var).ToList();
+            var objCoeffs = Enumerable.Repeat(_config.RoomChangePenalty, objVars.Count).ToList();
+            model.Minimize(LinearExpr.WeightedSum(objVars.Cast<LinearExpr>(), objCoeffs));
+
+            var solver = new CpSolver();
+            solver.StringParameters = $"max_time_in_seconds:{_config.Solver.TimeLimitSeconds}";
+            var status = solver.Solve(model);
+
+            if (status is CpSolverStatus.Optimal or CpSolverStatus.Feasible)
+            {
+                LogSolution(solver, assignment, classes, teacherGroups, transitionPenalties);
+            }
+            else
+            {
+                _logger.LogWarning("Solver finished with status {Status}; no timetable was produced.", status);
+            }
+
+            _logger.LogInformation("Solver statistics: {Stats}", solver.ResponseStats());
+        }
+
+        private void LogSolution(
+            CpSolver solver,
+            BoolVar[,,] assignment,
+            IReadOnlyList<ClassEntry> classes,
+            IReadOnlyDictionary<string, List<ClassEntry>> teacherGroups,
+            IReadOnlyList<RoomChangePenalty> penalties)
+        {
+            _logger.LogInformation("Timetable objective value (room-change penalties): {Objective}",
+                solver.ObjectiveValue);
+
+            foreach (var teacher in teacherGroups)
+            {
+                _logger.LogInformation("Schedule for {Teacher}:", teacher.Key);
+                for (var day = 0; day < _config.Days.Count; ++day)
+                {
+                    var builder = new StringBuilder();
+                    builder.Append($"{_config.Days[day],-9}: ");
+                    for (var block = 0; block < _config.BlocksPerDay; ++block)
+                    {
+                        var assigned = teacher.Value.FirstOrDefault(entry =>
+                            solver.BooleanValue(assignment[entry.Index, day, block]));
+
+                        if (assigned is not null)
+                        {
+                            builder.Append($"{assigned.Config.Id}({assigned.Config.Room}) ");
+                        }
+                        else
+                        {
+                            builder.Append("Free ");
+                        }
+                    }
+
+                    _logger.LogInformation(builder.ToString());
+                }
+            }
+
+            foreach (var entry in classes)
+            {
+                var count = 0;
+                for (var day = 0; day < _config.Days.Count; ++day)
+                for (var block = 0; block < _config.BlocksPerDay; ++block)
+                {
+                    if (solver.BooleanValue(assignment[entry.Index, day, block]))
+                    {
+                        ++count;
+                    }
+                }
+
+                _logger.LogInformation("Class {ClassId} scheduled for {Count}/{Required} blocks.",
+                    entry.Config.Id, count, entry.Config.WeeklyBlocks);
+            }
+
+            foreach (var penalty in penalties)
+            {
+                if (solver.BooleanValue(penalty.Var))
+                {
+                    _logger.LogInformation(
+                        "Penalty: {Teacher} changes from {FromRoom} ({FromClass}) to {ToRoom} ({ToClass}) on {Day} block {Block} -> {NextBlock}.",
+                        penalty.Teacher,
+                        penalty.FromRoom,
+                        penalty.FromClass,
+                        penalty.ToRoom,
+                        penalty.ToClass,
+                        penalty.Day,
+                        penalty.Block,
+                        penalty.Block + 1);
+                }
+            }
+        }
+
+        private void ValidateConfig()
+        {
+            if (_config.Days == null || !_config.Days.Any())
+            {
+                throw new InvalidOperationException("You must specify at least one day in the Scheduler configuration.");
+            }
+
+            if (_config.BlocksPerDay <= 0)
+            {
+                throw new InvalidOperationException("BlocksPerDay must be greater than zero.");
+            }
+
+            if (_config.Classes == null || !_config.Classes.Any())
+            {
+                throw new InvalidOperationException("At least one class must be defined.");
+            }
+
+            var teacherSet = new HashSet<string>(_config.Teachers.Select(t => t.Name));
+            foreach (var cls in _config.Classes)
+            {
+                if (!teacherSet.Contains(cls.Teacher))
+                {
+                    throw new InvalidOperationException($"Class {cls.Id} references unknown teacher {cls.Teacher}.");
+                }
+            }
+
+            if (_config.RoomChangePenalty < 0)
+            {
+                _config.RoomChangePenalty = 0;
+            }
+
+            if (_config.Solver == null)
+            {
+                _config.Solver = new SolverConfig();
+            }
+
+            if (_config.Solver.TimeLimitSeconds <= 0)
+            {
+                _config.Solver = _config.Solver with { TimeLimitSeconds = 10.0 };
+            }
+        }
+    }
+
+    public sealed record SchedulerConfig
+    {
+        public List<string> Days { get; init; } = new();
+        public int BlocksPerDay { get; init; } = 9;
+        public int RoomChangePenalty { get; set; } = 5;
+        public SolverConfig Solver { get; set; } = new();
+        public List<TeacherConfig> Teachers { get; init; } = new();
+        public List<ClassConfig> Classes { get; init; } = new();
+    }
+
+    public sealed record SolverConfig
+    {
+        public double TimeLimitSeconds { get; init; } = 10.0;
+    }
+
+    public sealed record TeacherConfig(string Name);
+
+    public sealed record ClassConfig
+    {
+        public string Id { get; init; } = string.Empty;
+        public string Teacher { get; init; } = string.Empty;
+        public string Room { get; init; } = string.Empty;
+        public int WeeklyBlocks { get; init; }
+    }
+
+    internal sealed record ClassEntry(ClassConfig Config, int Index);
+
+    internal sealed record RoomChangePenalty(
+        BoolVar Var,
+        string Teacher,
+        string Day,
+        int Block,
+        string FromClass,
+        string FromRoom,
+        string ToClass,
+        string ToRoom);
 }
