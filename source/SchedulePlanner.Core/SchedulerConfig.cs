@@ -28,7 +28,7 @@ public sealed record SchedulerConfig
 
 public sealed record Teacher
 {
-    public int Id { get; init; }
+    public string Id { get; init; } = string.Empty;
     public string FullName { get; init; } = string.Empty;
     public string PreferredRoom { get; init; } = string.Empty;
     public int TargetLoadBlocks { get; init; } = 10;

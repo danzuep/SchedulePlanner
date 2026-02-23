@@ -2,6 +2,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using SchedulePlanner.Core;
 
+namespace SchedulePlanner;
+
 public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddSchedulingService(this IServiceCollection services, IConfiguration configuration)
@@ -16,8 +18,9 @@ public static class ServiceCollectionExtensions
         }
         var config = configuration.GetSection(SchedulerConfig.SectionName);
         services.Configure<SchedulerConfig>(config);
-        services.AddSingleton<IService, SchedulingService>();
-        services.AddHostedService<Worker>();
+        services.AddSingleton<SchedulingService>();
+        services.AddSingleton<IService>(provider =>
+            provider.GetRequiredService<SchedulingService>());
         return services;
     }
 }

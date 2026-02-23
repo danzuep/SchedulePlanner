@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using SchedulePlanner;
 using SchedulePlanner.Core;
 using SchedulePlanner.Csv;
 
@@ -28,13 +29,13 @@ internal static class Program
             .Build();
 
         void InitialiseConfiguration(IConfigurationBuilder builder) =>
-            builder.AddCommandLineSwitchMappings((builder, switchMappings) =>
-                builder.AddCommandLine(args, switchMappings), args);
+            builder.AddCommandLineSwitchMappings(args);
 
         void InitialiseServices(HostBuilderContext context, IServiceCollection services)
         {
             services.AddSchedulingService(context.Configuration);
             services.AddCsvSchedulerSources(context.Configuration);
+            services.AddHostedService<Worker>();
         }
 
         void InitialiseLogging(ILoggingBuilder builder) =>
@@ -45,25 +46,34 @@ internal static class Program
             });
     }
 
-    public static IConfigurationBuilder AddCommandLineSwitchMappings(this IConfigurationBuilder builder, Action<IConfigurationBuilder, IDictionary<string, string>> action, params string[] args)
+    public static IConfigurationBuilder AddCommandLineSwitchMappings(this IConfigurationBuilder builder, params string[] args)
     {
         if (builder == null)
         {
             throw new ArgumentNullException(nameof(builder));
         }
-        if (action == null)
+        var switchMappings = new Dictionary<string, string>()
         {
-            throw new ArgumentNullException(nameof(action));
-        }
-        if (args is { Length: > 0 })
-        {
-            var switchMappings = new Dictionary<string, string>()
-        {
-            { "-b", $"{SchedulerConfig.SectionName}:{nameof(SchedulerConfig.BlocksPerDay)}" },
-            { "-p", $"{SchedulerConfig.SectionName}:{nameof(SchedulerConfig.RoomChangePenalty)}" }
+            { "--BlocksPerDay", $"{SchedulerConfig.SectionName}:{nameof(SchedulerConfig.BlocksPerDay)}" },
+            { "--RoomChangePenalty", $"{SchedulerConfig.SectionName}:{nameof(SchedulerConfig.RoomChangePenalty)}" }
         };
-            action(builder, switchMappings);
-        }
+        builder.AddCommandLine(args, switchMappings);
         return builder;
+    }
+
+    [ExcludeFromCodeCoverage]
+    public class Worker : BackgroundService
+    {
+        private readonly IService _processExecutionService;
+
+        public Worker(IService processExecutionService)
+        {
+            _processExecutionService = processExecutionService;
+        }
+
+        protected override async Task ExecuteAsync(CancellationToken cancellationToken)
+        {
+            await _processExecutionService.RunAsync(cancellationToken).ConfigureAwait(false);
+        }
     }
 }

@@ -70,19 +70,14 @@ public sealed class CsvSchedulerConfigBuilder : ICsvSchedulerConfigBuilder
         var list = new List<Teacher>(rows.Count);
         foreach (var row in rows)
         {
-            if (row.Length < 2)
+            if (row.Length < 1)
             {
-                throw new InvalidOperationException("Teachers CSV must contain at least Id and FullName columns.");
-            }
-
-            if (!int.TryParse(row[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var id))
-            {
-                throw new InvalidOperationException($"Invalid teacher Id '{row[0]}'.");
+                throw new InvalidOperationException("Teachers CSV must contain at least an ID column.");
             }
 
             list.Add(new Teacher
             {
-                Id = id,
+                Id = row[0].ToString(CultureInfo.InvariantCulture),
                 FullName = row[1],
                 PreferredRoom = row.ElementAtOrDefault(2) ?? string.Empty,
                 TargetLoadBlocks = row.Length > 3 && int.TryParse(row[3], out var target) ? target : 10
@@ -181,12 +176,15 @@ public sealed class CsvSchedulerConfigBuilder : ICsvSchedulerConfigBuilder
             await reader.ReadLineAsync().ConfigureAwait(false);
         }
 
-        while (!reader.EndOfStream && !cancellationToken.IsCancellationRequested)
+        while (true)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             var line = await reader.ReadLineAsync().ConfigureAwait(false);
             if (line is null)
             {
-                continue;
+                // Reached end of stream
+                break;
             }
 
             var columns = line.Split(_options.Delimiter).Select(col => col.Trim()).ToArray();

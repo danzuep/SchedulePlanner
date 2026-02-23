@@ -12,6 +12,7 @@ namespace SchedulePlanner.Core
 
     public sealed class SchedulingService : IService
     {
+        public SchedulerConfig Config => _config;
         private readonly SchedulerConfig _config;
         private readonly ILogger<SchedulingService> _logger;
 
@@ -39,10 +40,13 @@ namespace SchedulePlanner.Core
             var assignment = new BoolVar[classCount, numDays, blocksPerDay];
             for (var cls = 0; cls < classCount; ++cls)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 for (var day = 0; day < numDays; ++day)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     for (var block = 0; block < blocksPerDay; ++block)
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
                         assignment[cls, day, block] = model.NewBoolVar(
                             $"assign_{classAssignments[cls].Config.Key}_day{day}_block{block}");
                     }
@@ -51,11 +55,14 @@ namespace SchedulePlanner.Core
 
             foreach (var entry in classAssignments)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var linear = new List<BoolVar>();
                 for (var day = 0; day < numDays; ++day)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     for (var block = 0; block < blocksPerDay; ++block)
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
                         linear.Add(assignment[entry.Index, day, block]);
                     }
                 }
@@ -70,7 +77,7 @@ namespace SchedulePlanner.Core
             }
 
             var teacherGroups = classAssignments
-                .GroupBy(entry => entry.Teacher.Id.ToString(), StringComparer.OrdinalIgnoreCase)
+                .GroupBy(entry => entry.Teacher.Id, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(
                     g => g.Key,
                     g => new TeacherGroup(g.First().Teacher, g.ToList()),
@@ -78,11 +85,14 @@ namespace SchedulePlanner.Core
 
             foreach (var kvp in teacherGroups)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var teacherAssignments = kvp.Value.Classes;
                 for (var day = 0; day < numDays; ++day)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     for (var block = 0; block < blocksPerDay; ++block)
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
                         var slots = teacherAssignments
                             .Select(entry => assignment[entry.Index, day, block])
                             .ToList();
@@ -101,10 +111,13 @@ namespace SchedulePlanner.Core
 
             foreach (var roomClasses in roomGroups.Values)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 for (var day = 0; day < numDays; ++day)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     for (var block = 0; block < blocksPerDay; ++block)
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
                         var slots = roomClasses
                             .Select(entry => assignment[entry.Index, day, block])
                             .ToList();
@@ -120,16 +133,21 @@ namespace SchedulePlanner.Core
             var transitionPenalties = new List<RoomChangePenalty>();
             for (var day = 0; day < numDays; ++day)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 for (var block = 0; block < blocksPerDay - 1; ++block)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     foreach (var teacherKvp in teacherGroups)
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
                         var teacherId = teacherKvp.Key;
                         var entries = teacherKvp.Value.Classes;
                         foreach (var current in entries)
                         {
+                            cancellationToken.ThrowIfCancellationRequested();
                             foreach (var next in entries)
                             {
+                                cancellationToken.ThrowIfCancellationRequested();
                                 if (current.Room == next.Room)
                                 {
                                     continue;
@@ -265,7 +283,7 @@ namespace SchedulePlanner.Core
         {
             var comparer = StringComparer.OrdinalIgnoreCase;
             var teachersById = _config.Teachers
-                .ToDictionary(t => t.Id.ToString(), t => t, comparer);
+                .ToDictionary(t => t.Id, t => t, comparer);
 
             var assignmentsByDepartment = _config.TeacherDepartments
                 .Where(a => !string.IsNullOrWhiteSpace(a.Department))
