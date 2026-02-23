@@ -1,0 +1,159 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="SchedulePlanner.App.MainPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Schedule Planner">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="20">
+            <Label Text="High School Scheduler" FontSize="Title" />
+            <Border Padding="16">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Add Teacher" FontAttributes="Bold" />
+                    <Entry Placeholder="Full Name" Text="{Binding NewTeacherName}" />
+                    <Entry Placeholder="Preferred Room (e.g. 601)" Text="{Binding NewTeacherRoom}" />
+                    <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
+                        <Label Text="Target Load:" VerticalOptions="Center" />
+                        <Label Text="{Binding NewTeacherTargetLoad}" VerticalOptions="Center" />
+                        <Stepper
+                            Minimum="1"
+                            Maximum="30"
+                            Increment="1"
+                            Value="{Binding NewTeacherTargetLoad}" />
+                    </HorizontalStackLayout>
+                    <Button
+                        Text="Add Teacher"
+                        Command="{Binding AddTeacherCommand}"
+                        IsEnabled="{Binding IsNotBusy}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Border Padding="16">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Add Class" FontAttributes="Bold" />
+                    <Entry Placeholder="Class Key (e.g. ENG10A)" Text="{Binding NewClassKey}" />
+                    <Entry Placeholder="Class Name" Text="{Binding NewClassName}" />
+                    <Entry Placeholder="Preferred Room" Text="{Binding NewClassRoom}" />
+                    <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
+                        <Label Text="Weekly Blocks:" VerticalOptions="Center" />
+                        <Label Text="{Binding NewClassWeeklyBlocks}" VerticalOptions="Center" />
+                        <Stepper
+                            Minimum="1"
+                            Maximum="10"
+                            Increment="1"
+                            Value="{Binding NewClassWeeklyBlocks}" />
+                    </HorizontalStackLayout>
+                    <Button
+                        Text="Add Class"
+                        Command="{Binding AddClassCommand}"
+                        IsEnabled="{Binding IsNotBusy}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Border Padding="16">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Assign Department (Teacher ⇄ Class)" FontAttributes="Bold" />
+                    <Picker
+                        Title="Teacher"
+                        ItemsSource="{Binding Teachers}"
+                        ItemDisplayBinding="{Binding FullName}"
+                        SelectedItem="{Binding SelectedDepartmentTeacher}" />
+                    <Picker
+                        Title="Class"
+                        ItemsSource="{Binding Classes}"
+                        ItemDisplayBinding="{Binding Key}"
+                        SelectedItem="{Binding SelectedDepartmentClass}" />
+                    <Button
+                        Text="Add Department Link"
+                        Command="{Binding AddDepartmentCommand}"
+                        IsEnabled="{Binding IsNotBusy}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Border Padding="16">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Current Teachers" FontAttributes="Bold" />
+                    <CollectionView
+                        ItemsSource="{Binding Teachers}"
+                        HeightRequest="120"
+                        EmptyView="No teachers yet.">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid ColumnDefinitions="70,*,80,80">
+                                    <Label Text="{Binding Id}" Grid.Column="0" />
+                                    <Label Text="{Binding FullName}" Grid.Column="1" />
+                                    <Label Text="{Binding PreferredRoom}" Grid.Column="2" />
+                                    <Label Text="{Binding TargetLoad}" Grid.Column="3" />
+                                </Grid>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+
+                    <Label Text="Departments" FontAttributes="Bold" />
+                    <CollectionView
+                        ItemsSource="{Binding Departments}"
+                        HeightRequest="140"
+                        EmptyView="No department links yet.">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid ColumnDefinitions="60,*,*,*">
+                                    <Label Text="{Binding TeacherId}" Grid.Column="0" />
+                                    <Label Text="{Binding TeacherName}" Grid.Column="1" />
+                                    <Label Text="{Binding ClassKey}" Grid.Column="2" />
+                                    <Label Text="{Binding ClassName}" Grid.Column="3" />
+                                </Grid>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Border>
+
+            <Border Padding="16">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Schedule and Results" FontAttributes="Bold" />
+                    <Button
+                        Text="Generate Schedule"
+                        Command="{Binding RunScheduleCommand}"
+                        IsEnabled="{Binding IsNotBusy}" />
+                    <Label Text="{Binding ResultMessage}" FontAttributes="Italic" />
+                    <CollectionView
+                        ItemsSource="{Binding ScheduleEntries}"
+                        HeightRequest="250"
+                        EmptyView="Solve to see the timetable.">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Border Stroke="{Binding IsFree, Converter={StaticResource BooleanToColorConverter}}" StrokeThickness="1" Padding="8">
+                                    <Grid ColumnDefinitions="*,80,80,80">
+                                        <Label Text="{Binding TeacherName}" Grid.Column="0" />
+                                        <Label Text="{Binding Day}" Grid.Column="1" />
+                                        <Label Text="{Binding Block}" Grid.Column="2" />
+                                        <Label Text="{Binding DisplayText}" Grid.Column="3" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+
+                    <Label Text="Room-Change Penalties" FontAttributes="Bold" />
+                    <CollectionView
+                        ItemsSource="{Binding Penalties}"
+                        HeightRequest="160"
+                        EmptyView="No penalties detected.">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid ColumnDefinitions="*,*,*,*,*">
+                                    <Label Text="{Binding TeacherName}" Grid.Column="0" />
+                                    <Label Text="{Binding Day}" Grid.Column="1" />
+                                    <Label Text="{Binding Block}" Grid.Column="2" />
+                                    <Label Text="{Binding FromClass}" Grid.Column="3" />
+                                    <Label Text="{Binding ToClass}" Grid.Column="4" />
+                                </Grid>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Border>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
