@@ -1,12 +1,8 @@
-﻿namespace SchedulePlanner.Core;
-
-using System;
-using System.Diagnostics.CodeAnalysis;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using SchedulePlanner.Core;
 
 [ExcludeFromCodeCoverage]
 public class Worker : IHostedService, IDisposable

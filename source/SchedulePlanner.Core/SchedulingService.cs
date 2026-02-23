@@ -267,7 +267,7 @@ namespace SchedulePlanner.Core
             var teachersById = _config.Teachers
                 .ToDictionary(t => t.Id.ToString(), t => t, comparer);
 
-            var assignmentsByDepartment = _config.DepartmentAssignments
+            var assignmentsByDepartment = _config.TeacherDepartments
                 .Where(a => !string.IsNullOrWhiteSpace(a.Department))
                 .GroupBy(a => a.Department, comparer)
                 .ToDictionary(
@@ -361,7 +361,7 @@ namespace SchedulePlanner.Core
                 throw new InvalidOperationException("At least one teacher must be defined.");
             }
 
-            if (_config.DepartmentAssignments == null || !_config.DepartmentAssignments.Any())
+            if (_config.TeacherDepartments == null || !_config.TeacherDepartments.Any())
             {
                 throw new InvalidOperationException("At least one department assignment is required.");
             }

@@ -1,9 +1,6 @@
-﻿namespace SchedulePlanner.Core;
-
-using System;
-using System.IO.Abstractions;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using SchedulePlanner.Core;
 
 public static class ServiceCollectionExtensions
 {
@@ -19,7 +16,6 @@ public static class ServiceCollectionExtensions
         }
         var config = configuration.GetSection(SchedulerConfig.SectionName);
         services.Configure<SchedulerConfig>(config);
-        services.AddSingleton<IFileSystem, FileSystem>();
         services.AddSingleton<IService, SchedulingService>();
         services.AddHostedService<Worker>();
         return services;

@@ -1,4 +1,5 @@
 <Solution>
   <Project Path="SchedulePlanner.Cli/SchedulePlanner.Cli.csproj" Id="f0f3dfa0-e85b-4cff-9a2d-f06b9568b3df" />
   <Project Path="SchedulePlanner.Core/SchedulePlanner.Core.csproj" Id="cfe13b9d-ba98-4f55-9dd6-4b76c4afa375" />
+  <Project Path="SchedulePlanner.Csv/SchedulePlanner.Csv.csproj" Id="72bb8288-2407-463f-8f91-809825cbbb75" />
 </Solution>

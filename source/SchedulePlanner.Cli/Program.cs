@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SchedulePlanner.Core;
+using SchedulePlanner.Csv;
 
 internal static class Program
 {
@@ -33,6 +34,7 @@ internal static class Program
         void InitialiseServices(HostBuilderContext context, IServiceCollection services)
         {
             services.AddSchedulingService(context.Configuration);
+            services.AddCsvSchedulerSources(context.Configuration);
         }
 
         void InitialiseLogging(ILoggingBuilder builder) =>

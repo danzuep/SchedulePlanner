@@ -23,7 +23,7 @@ public sealed record SchedulerConfig
     public List<Teacher> Teachers { get; init; } = new();
     public List<Class> Classes { get; init; } = new();
     public List<Department> Departments { get; init; } = new();
-    public List<TeacherDepartment> DepartmentAssignments { get; init; } = new();
+    public List<TeacherDepartment> TeacherDepartments { get; init; } = new();
 }
 
 public sealed record Teacher
