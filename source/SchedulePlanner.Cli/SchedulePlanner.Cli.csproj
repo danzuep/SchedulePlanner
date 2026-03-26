@@ -9,7 +9,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SchedulePlanner.Core\SchedulePlanner.Core.csproj" />
-    <ProjectReference Include="..\SchedulePlanner.Csv\SchedulePlanner.Csv.csproj" />
+    <ProjectReference Include="..\SchedulePlanner.ImportExport\SchedulePlanner.ImportExport.csproj" />
   </ItemGroup>
 
   <ItemGroup>

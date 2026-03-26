@@ -53,8 +53,8 @@
 		<PackageReference Include="Microsoft.Maui.Essentials" Version="10.0.41" />
 	</ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\SchedulePlanner.Csv\SchedulePlanner.Csv.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\SchedulePlanner.ImportExport\SchedulePlanner.ImportExport.csproj" />
+	</ItemGroup>
 
 </Project>
