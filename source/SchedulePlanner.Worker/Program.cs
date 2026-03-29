@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using SchedulePlanner.Core;
+using SchedulePlanner.ImportExport.Excel;
 
 namespace SchedulePlanner.Worker
 {
@@ -22,6 +23,7 @@ namespace SchedulePlanner.Worker
 
         public static void Initialise(HostBuilderContext context, IServiceCollection services)
         {
+            services.AddSingleton<IService, ImportService>();
             services.AddHostedService<Worker>();
         }
 

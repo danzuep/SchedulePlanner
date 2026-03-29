@@ -6,27 +6,19 @@ using SchedulePlanner.Core;
 
 namespace SchedulePlanner.ImportExport.Excel;
 
-public sealed record ExcelOptions
-{
-    public static readonly string SectionName = "Excel";
-
-    public string FilePath { get; init; } = "schedule-config.xlsx";
-    public bool HasHeader { get; init; } = true;
-}
-
-public interface IExcelSchedulerConfigBuilder
+public interface IExcelSchedulerConfigReader
 {
     Task<SchedulerConfig> BuildAsync(CancellationToken cancellationToken = default);
 }
 
-public sealed class ExcelSchedulerConfigBuilder : IExcelSchedulerConfigBuilder
+public sealed class ExcelSchedulerConfigReader : IExcelSchedulerConfigReader
 {
-    private readonly ExcelOptions _options;
-    private readonly ILogger<ExcelSchedulerConfigBuilder> _logger;
+    private readonly ImportExportConfig _options;
+    private readonly ILogger<ExcelSchedulerConfigReader> _logger;
 
-    public ExcelSchedulerConfigBuilder(
-        IOptions<ExcelOptions> options,
-        ILogger<ExcelSchedulerConfigBuilder> logger)
+    public ExcelSchedulerConfigReader(
+        IOptions<ImportExportConfig> options,
+        ILogger<ExcelSchedulerConfigReader> logger)
     {
         _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -34,12 +26,13 @@ public sealed class ExcelSchedulerConfigBuilder : IExcelSchedulerConfigBuilder
 
     public Task<SchedulerConfig> BuildAsync(CancellationToken cancellationToken = default)
     {
-        if (!File.Exists(_options.FilePath))
+        var fullPath = Path.GetFullPath(_options.FilePath);
+        if (!File.Exists(fullPath))
         {
-            throw new FileNotFoundException($"Excel file '{_options.FilePath}' not found.");
+            throw new FileNotFoundException($"Excel file '{fullPath}' not found.");
         }
 
-        using var workbook = new XLWorkbook(_options.FilePath);
+        using var workbook = new XLWorkbook(fullPath);
 
         var config = new SchedulerConfig
         {
@@ -55,7 +48,7 @@ public sealed class ExcelSchedulerConfigBuilder : IExcelSchedulerConfigBuilder
 
         _logger.LogInformation(
             "Loaded Excel scheduler config from {File}. Teachers: {Teachers}, Classes: {Classes}",
-            _options.FilePath,
+            _options.FileName,
             config.Teachers.Count,
             config.Classes.Count);
 
@@ -143,7 +136,7 @@ public sealed class ExcelSchedulerConfigBuilder : IExcelSchedulerConfigBuilder
 
     private static void ReadSchedulerSettings(XLWorkbook workbook, SchedulerConfig config)
     {
-        if (!workbook.TryGetWorksheet("Scheduler", out var ws))
+        if (!workbook.TryGetWorksheet("Settings", out var ws))
         {
             return;
         }

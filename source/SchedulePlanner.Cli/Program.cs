@@ -5,6 +5,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SchedulePlanner.Core;
 using SchedulePlanner.ImportExport;
+using SchedulePlanner.ImportExport.Excel;
 
 public static partial class Program
 {

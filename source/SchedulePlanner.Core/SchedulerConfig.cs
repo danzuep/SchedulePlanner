@@ -11,6 +11,8 @@ public sealed record SchedulerConfig : IOptions<SchedulerConfig>
 
     public static readonly string SectionName = "Scheduler";
 
+    public static readonly string SettingsName = "Settings";
+
     public IReadOnlyList<DayOfWeek> Days { get; set; } = new[]
     {
         DayOfWeek.Monday,

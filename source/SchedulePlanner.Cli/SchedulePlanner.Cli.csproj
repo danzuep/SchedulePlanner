@@ -8,13 +8,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\SchedulePlanner.ImportExport\SchedulePlanner.ImportExport.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Content Include="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SchedulePlanner.ImportExport\SchedulePlanner.ImportExport.csproj" />
   </ItemGroup>
 
 </Project>

@@ -42,9 +42,8 @@ public static class ServiceCollectionExtensions
         if (services == null) throw new ArgumentNullException(nameof(services));
         if (configuration == null) throw new ArgumentNullException(nameof(configuration));
 
-        services.Configure<ExcelOptions>(configuration.GetSection(ExcelOptions.SectionName));
         services.Configure<ImportExportConfig>(configuration.GetSection(ImportExportConfig.SectionName));
-        services.AddTransient<IExcelSchedulerConfigBuilder, ExcelSchedulerConfigBuilder>();
+        services.AddTransient<IExcelSchedulerConfigReader, ExcelSchedulerConfigReader>();
         return services;
     }
 }
