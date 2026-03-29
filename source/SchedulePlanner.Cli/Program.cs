@@ -3,9 +3,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using SchedulePlanner;
 using SchedulePlanner.Core;
-using SchedulePlanner.Csv;
+using SchedulePlanner.ImportExport;
+using SchedulePlanner.ImportExport.Csv;
 
 internal static class Program
 {

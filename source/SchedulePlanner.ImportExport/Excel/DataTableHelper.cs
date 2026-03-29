@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using System.Reflection;
 
 internal static class DataTableHelper
 {
@@ -12,7 +13,7 @@ internal static class DataTableHelper
             ArgumentNullException.ThrowIfNull(list);
 
             var type = typeof(T);
-            var properties = type.GetProperties();
+            var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
 
             var dataTable = new DataTable
             {
@@ -21,19 +22,18 @@ internal static class DataTableHelper
 
             foreach (var heading in properties)
             {
-                dataTable.Columns.Add(
-                    new DataColumn(heading.Name.Replace('_', ' '),
-                        Nullable.GetUnderlyingType(heading.PropertyType)
-                        ?? heading.PropertyType));
+                var columnType = Nullable.GetUnderlyingType(heading.PropertyType) ?? heading.PropertyType;
+                dataTable.Columns.Add(new DataColumn(heading.Name, columnType));
             }
 
-            foreach (T entity in list)
+            foreach (var entity in list)
             {
-                object?[] values = new object[properties.Length];
+                var values = new object?[properties.Length];
                 for (int i = 0; i < properties.Length; i++)
                 {
-                    values[i] = properties[i].GetValue(entity);
+                    values[i] = properties[i].GetValue(entity) ?? DBNull.Value;
                 }
+
                 dataTable.Rows.Add(values);
             }
 

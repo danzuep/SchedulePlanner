@@ -3,9 +3,12 @@
 using System;
 using System.Collections.Generic;
 using Google.OrTools.Sat;
+using Microsoft.Extensions.Options;
 
-public sealed record SchedulerConfig
+public sealed record SchedulerConfig : IOptions<SchedulerConfig>
 {
+    public SchedulerConfig Value => this.Value;
+
     public static readonly string SectionName = "Scheduler";
 
     public IReadOnlyList<DayOfWeek> Days { get; init; } = new[]

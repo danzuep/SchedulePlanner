@@ -1,4 +1,4 @@
-﻿namespace SchedulePlanner.Csv;
+﻿namespace SchedulePlanner.ImportExport.Csv;
 
 using System.Globalization;
 using System.Text;

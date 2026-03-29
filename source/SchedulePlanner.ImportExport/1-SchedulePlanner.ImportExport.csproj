@@ -18,7 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\SchedulePlanner.Core\SchedulePlanner.Core.csproj" />
+    <ProjectReference Include="..\SchedulePlanner.Core\0-SchedulePlanner.Core.csproj" />
   </ItemGroup>
 
 </Project>

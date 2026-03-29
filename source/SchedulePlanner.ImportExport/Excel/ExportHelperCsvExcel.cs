@@ -3,7 +3,7 @@ using System.Text;
 using ClosedXML.Excel;
 using CsvHelper;
 
-namespace SchedulePlanner.ImportExport
+namespace SchedulePlanner.ImportExport.Excel
 {
     public enum ExportFileType
     {
