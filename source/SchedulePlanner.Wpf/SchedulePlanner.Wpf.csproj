@@ -17,7 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\SchedulePlanner.ImportExport\SchedulePlanner.ImportExport.csproj" />
+    <ProjectReference Include="..\SchedulePlanner.Cli\SchedulePlanner.Cli.csproj" />
   </ItemGroup>
 
 </Project>

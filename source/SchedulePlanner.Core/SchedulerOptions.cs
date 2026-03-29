@@ -5,9 +5,9 @@ using System.Collections.Generic;
 using Google.OrTools.Sat;
 using Microsoft.Extensions.Options;
 
-public sealed record SchedulerConfig : IOptions<SchedulerConfig>
+public sealed record SchedulerOptions : IOptions<SchedulerOptions>
 {
-    public SchedulerConfig Value => this;
+    public SchedulerOptions Value => this;
 
     public static readonly string SectionName = "Scheduler";
 

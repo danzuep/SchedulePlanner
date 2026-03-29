@@ -13,11 +13,11 @@ namespace SchedulePlanner.Core
 
     public sealed class SchedulingService : IService
     {
-        public SchedulerConfig Config => _config;
-        private readonly SchedulerConfig _config;
+        public SchedulerOptions Config => _config;
+        private readonly SchedulerOptions _config;
         private readonly ILogger<SchedulingService> _logger;
 
-        public SchedulingService(IOptions<SchedulerConfig> config, ILogger<SchedulingService>? logger = null)
+        public SchedulingService(IOptions<SchedulerOptions> config, ILogger<SchedulingService>? logger = null)
         {
             _config = config.Value;
             _logger = logger ?? NullLogger<SchedulingService>.Instance;

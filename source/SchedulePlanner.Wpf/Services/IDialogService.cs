@@ -2,8 +2,8 @@
 
 public interface IDialogService
 {
-    string? OpenPdfFile();
-    string? SavePdfFile();
+    string? OpenFile();
+    string? SaveFile(string? defaultPath = null);
     void ShowMessage(string title, string message);
     void ShowError(string title, string message);
 }

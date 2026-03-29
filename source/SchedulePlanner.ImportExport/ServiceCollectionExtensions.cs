@@ -16,7 +16,7 @@ public static class ServiceCollectionExtensions
         if (services == null) throw new ArgumentNullException(nameof(services));
         if (configuration == null) throw new ArgumentNullException(nameof(configuration));
 
-        services.Configure<SchedulerConfig>(configuration.GetSection(SchedulerConfig.SectionName));
+        services.Configure<SchedulerOptions>(configuration.GetSection(SchedulerOptions.SectionName));
         services.AddSingleton<SchedulingService>();
         services.AddSingleton<IService>(provider => provider.GetRequiredService<SchedulingService>());
         return services;
@@ -42,7 +42,7 @@ public static class ServiceCollectionExtensions
         if (services == null) throw new ArgumentNullException(nameof(services));
         if (configuration == null) throw new ArgumentNullException(nameof(configuration));
 
-        services.Configure<ImportExportConfig>(configuration.GetSection(ImportExportConfig.SectionName));
+        services.Configure<ImportExportOptions>(configuration.GetSection(ImportExportOptions.SectionName));
         services.AddTransient<IExcelSchedulerConfigReader, ExcelSchedulerConfigReader>();
         return services;
     }

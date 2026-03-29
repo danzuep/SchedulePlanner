@@ -25,7 +25,7 @@ public sealed record CsvOptions
 
 public interface ICsvSchedulerConfigBuilder
 {
-    Task<SchedulerConfig> BuildAsync(CancellationToken cancellationToken = default);
+    Task<SchedulerOptions> BuildAsync(CancellationToken cancellationToken = default);
 }
 
 public sealed class CsvSchedulerConfigBuilder : ICsvSchedulerConfigBuilder
@@ -44,14 +44,14 @@ public sealed class CsvSchedulerConfigBuilder : ICsvSchedulerConfigBuilder
         _fileSystem = fileSystem ?? new FileSystem();
     }
 
-    public async Task<SchedulerConfig> BuildAsync(CancellationToken cancellationToken = default)
+    public async Task<SchedulerOptions> BuildAsync(CancellationToken cancellationToken = default)
     {
         var teachers = await ReadTeachersAsync(cancellationToken).ConfigureAwait(false);
         var departments = await ReadDepartmentsAsync(cancellationToken).ConfigureAwait(false);
         var teacherDepartments = await ReadTeacherDepartmentsAsync(cancellationToken).ConfigureAwait(false);
         var classes = await ReadClassesAsync(cancellationToken).ConfigureAwait(false);
 
-        var config = new SchedulerConfig
+        var config = new SchedulerOptions
         {
             Teachers = teachers,
             Departments = departments,

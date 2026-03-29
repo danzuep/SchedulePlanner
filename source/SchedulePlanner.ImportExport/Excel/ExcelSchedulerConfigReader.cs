@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using ClosedXML.Excel;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using SchedulePlanner.Core;
 
@@ -8,23 +9,23 @@ namespace SchedulePlanner.ImportExport.Excel;
 
 public interface IExcelSchedulerConfigReader
 {
-    Task<SchedulerConfig> BuildAsync(CancellationToken cancellationToken = default);
+    Task<SchedulerOptions> BuildAsync(CancellationToken cancellationToken = default);
 }
 
 public sealed class ExcelSchedulerConfigReader : IExcelSchedulerConfigReader
 {
-    private readonly ImportExportConfig _options;
+    private readonly ImportExportOptions _options;
     private readonly ILogger<ExcelSchedulerConfigReader> _logger;
 
     public ExcelSchedulerConfigReader(
-        IOptions<ImportExportConfig> options,
-        ILogger<ExcelSchedulerConfigReader> logger)
+        IOptions<ImportExportOptions> options,
+        ILogger<ExcelSchedulerConfigReader>? logger = null)
     {
         _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _logger = logger ?? NullLogger<ExcelSchedulerConfigReader>.Instance;
     }
 
-    public Task<SchedulerConfig> BuildAsync(CancellationToken cancellationToken = default)
+    public Task<SchedulerOptions> BuildAsync(CancellationToken cancellationToken = default)
     {
         var fullPath = Path.GetFullPath(_options.FilePath);
         if (!File.Exists(fullPath))
@@ -34,7 +35,7 @@ public sealed class ExcelSchedulerConfigReader : IExcelSchedulerConfigReader
 
         using var workbook = new XLWorkbook(fullPath);
 
-        var config = new SchedulerConfig
+        var config = new SchedulerOptions
         {
             Teachers = ReadTeachers(workbook),
             Classes = ReadClasses(workbook),
@@ -134,7 +135,7 @@ public sealed class ExcelSchedulerConfigReader : IExcelSchedulerConfigReader
         };
     }
 
-    private static void ReadSchedulerSettings(XLWorkbook workbook, SchedulerConfig config)
+    private static void ReadSchedulerSettings(XLWorkbook workbook, SchedulerOptions config)
     {
         if (!workbook.TryGetWorksheet("Settings", out var ws))
         {

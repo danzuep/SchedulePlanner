@@ -2,25 +2,24 @@
 
 namespace SchedulePlanner.ImportExport.Excel;
 
-public sealed record ImportExportConfig : IOptions<ImportExportConfig>
+public sealed record ImportExportOptions : IOptions<ImportExportOptions>
 {
-    public ImportExportConfig Value => this;
+    public ImportExportOptions Value => this;
 
     public static readonly string SectionName = "ImportExport";
 
-    public static readonly ImportExportConfig Default = new ImportExportConfig
+    public static readonly ImportExportOptions Default = new ImportExportOptions
     {
 #if DEBUG
         Directory = "../..",
 #endif
-        FileName = "schedule.xlsx"
     };
 
     public ImportExportFileType FileType { get; set; } = ImportExportFileType.Xlsx;
 
-    public string Directory { get; set; } = string.Empty;
+    public string Directory { get; set; } = ".";
 
-    public string FileName { get; set; } = string.Empty;
+    public string FileName { get; set; } = "schedule-demo.xlsx";
 
     public string FilePath
     {

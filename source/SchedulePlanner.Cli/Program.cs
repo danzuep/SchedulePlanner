@@ -27,6 +27,7 @@ public static partial class Program
     public static void Initialise(HostBuilderContext context, IServiceCollection services)
     {
         services.AddSingleton<ExportService>();
+        services.AddSingleton<ImportService>();
     }
 
     public static IHostBuilder InitialiseBuilderDefaults(this IHostBuilder builder, params string[] args)
@@ -58,8 +59,8 @@ public static partial class Program
     private static IConfigurationBuilder AddCommandLineSwitchMappings(this IConfigurationBuilder builder, params string[] args)
     {
         var switchMappings = new Dictionary<string, string>();
-        MapCli(nameof(SchedulerConfig.BlocksPerDay));
-        MapCli(nameof(SchedulerConfig.RoomChangePenalty));
+        MapCli(nameof(SchedulerOptions.BlocksPerDay));
+        MapCli(nameof(SchedulerOptions.RoomChangePenalty));
         builder.AddCommandLine(args, switchMappings);
         return builder;
 
@@ -70,6 +71,6 @@ public static partial class Program
         }
 
         static KeyValuePair<string, string> GetSwitchMapping(string key) =>
-            new($"--{key}", $"{SchedulerConfig.SectionName}:{key}");
+            new($"--{key}", $"{SchedulerOptions.SectionName}:{key}");
     }
 }

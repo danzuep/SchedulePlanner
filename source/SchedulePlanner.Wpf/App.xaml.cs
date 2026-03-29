@@ -1,6 +1,9 @@
 ﻿using System.Windows;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using SchedulePlanner.ImportExport;
+using SchedulePlanner.ImportExport.Excel;
 using SchedulePlanner.Wpf.Services;
 using SchedulePlanner.Wpf.ViewModels;
 
@@ -23,6 +26,15 @@ namespace SchedulePlanner.Wpf
 
             services.AddSingleton<IDialogService, DialogService>();
             services.AddSingleton<MainViewModel>();
+
+            var configuration = new ConfigurationBuilder()
+                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+                .AddEnvironmentVariables()
+                .Build();
+
+            services.AddSchedulingService(configuration);
+            services.AddExcelSchedulerSources(configuration);
+            services.AddScoped<ExportService>();
 
             Services = services.BuildServiceProvider();
         }

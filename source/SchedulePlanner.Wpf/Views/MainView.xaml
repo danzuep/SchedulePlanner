@@ -11,153 +11,148 @@
         <ScrollViewer Grid.Column="1"
                       VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
-            <StackPanel Margin="20" HorizontalAlignment="Stretch">
+            <StackPanel Margin="24"
+                        HorizontalAlignment="Stretch">
 
                 <!-- Header -->
-                <Border Style="{StaticResource CardStyle}">
+                <Border Style="{StaticResource CardStyle}"
+                        Padding="20"
+                        Margin="0,0,0,16">
                     <StackPanel>
                         <TextBlock Text="Scheduler Planner"
                                    FontSize="28"
                                    FontWeight="SemiBold"
                                    Foreground="{StaticResource PrimaryTextBrush}" />
-                        <TextBlock Text="Upload an Excel schedule file, process it, and download the updated result."
-                                   Margin="0,6,0,0"
+                        <TextBlock Margin="0,8,0,0"
                                    Foreground="{StaticResource SecondaryTextBrush}"
-                                   FontSize="14" />
-                    </StackPanel>
-                </Border>
-
-                <!-- Upload Card -->
-                <Border Style="{StaticResource CardStyle}">
-                    <StackPanel>
-                        <TextBlock Text="Upload Excel file"
                                    FontSize="14"
-                                   FontWeight="SemiBold"
-                                   Foreground="{StaticResource PrimaryTextBrush}" />
-                        <TextBlock Text="Choose the source Excel workbook for the scheduler planner."
-                                   Margin="0,4,0,10"
-                                   Foreground="{StaticResource SecondaryTextBrush}"
-                                   FontSize="12" />
-
-                        <DockPanel LastChildFill="True">
-                            <Button Content="Browse"
-                                    Width="96"
-                                    Margin="12,0,0,0"
-                                    Command="{Binding BrowseInputWorkbookCommand}"
-                                    Background="{StaticResource AccentDarkBrush}" />
-                            <TextBox Text="{Binding InputWorkbookPath, UpdateSourceTrigger=PropertyChanged}"
-                                     ToolTip="Upload Excel file path" />
-                        </DockPanel>
-                    </StackPanel>
-                </Border>
-
-                <!-- Password Card -->
-                <Border Style="{StaticResource CardStyle}">
-                    <StackPanel>
-                        <TextBlock Text="Workbook password"
-                                   FontSize="14"
-                                   FontWeight="SemiBold"
-                                   Foreground="{StaticResource PrimaryTextBrush}" />
-                        <TextBlock Text="Enter the workbook password if the Excel file is protected."
-                                   Margin="0,4,0,10"
-                                   Foreground="{StaticResource SecondaryTextBrush}"
-                                   FontSize="12" />
-
-                        <Border BorderBrush="{StaticResource FieldBorderBrush}"
-                                BorderThickness="1"
-                                CornerRadius="12"
-                                Background="White">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-
-                                <Grid Grid.Column="0">
-                                    <PasswordBox x:Name="PasswordBox"
-                                                 BorderThickness="0"
-                                                 Background="Transparent"
-                                                 PasswordChanged="PasswordBox_OnPasswordChanged"
-                                                 Visibility="Visible"
-                                                 ToolTip="Workbook password" />
-
-                                    <TextBox x:Name="PasswordRevealBox"
-                                             BorderThickness="0"
-                                             Background="Transparent"
-                                             Visibility="Collapsed"
-                                             Text="{Binding WorkbookPassword, UpdateSourceTrigger=PropertyChanged}" />
-                                </Grid>
-
-                                <ToggleButton x:Name="RevealPasswordToggle"
-                                              Grid.Column="1"
-                                              Width="44"
-                                              BorderThickness="0"
-                                              Background="Transparent"
-                                              Margin="0"
-                                              ToolTip="Show or hide password">
-                                    <TextBlock Text="👁"
-                                               FontSize="16"
-                                               HorizontalAlignment="Center"
-                                               VerticalAlignment="Center" />
-                                </ToggleButton>
-                            </Grid>
-                        </Border>
+                                   TextWrapping="Wrap">
+                            <Run Text="Upload an Excel schedule workbook, process it, and view the results." />
+                        </TextBlock>
                     </StackPanel>
                 </Border>
 
                 <!-- Download Card -->
-                <Border Style="{StaticResource CardStyle}">
+                <Border Style="{StaticResource CardStyle}"
+                        Padding="20"
+                        Margin="0,0,0,16">
                     <StackPanel>
-                        <TextBlock Text="Download Excel file"
-                                   FontSize="14"
+                        <TextBlock FontSize="14"
                                    FontWeight="SemiBold"
-                                   Foreground="{StaticResource PrimaryTextBrush}" />
-                        <TextBlock Text="Select where the processed workbook should be saved."
-                                   Margin="0,4,0,10"
-                                   Foreground="{StaticResource SecondaryTextBrush}"
-                                   FontSize="12" />
+                                   Foreground="{StaticResource PrimaryTextBrush}"
+                                   Text="Export Excel template" />
 
-                        <DockPanel LastChildFill="True">
-                            <Button Content="Browse"
-                                    Width="96"
-                                    Margin="12,0,0,0"
-                                    Command="{Binding BrowseOutputWorkbookCommand}"
-                                    Background="{StaticResource AccentDarkBrush}" />
-                            <TextBox Text="{Binding OutputWorkbookPath, UpdateSourceTrigger=PropertyChanged}"
-                                     ToolTip="Download Excel file path" />
-                        </DockPanel>
+                        <TextBlock Margin="0,6,0,14"
+                                   Foreground="{StaticResource SecondaryTextBrush}"
+                                   FontSize="12"
+                                   TextWrapping="Wrap"
+                                   Text="Select where to save a demo schedule planner configuration template." />
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <Grid Grid.Column="0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="96" />
+                                </Grid.ColumnDefinitions>
+
+                                <TextBox Grid.Column="0"
+                                         Text="{Binding OutputWorkbookPath, UpdateSourceTrigger=PropertyChanged}"
+                                         ToolTip="Download Excel file path"
+                                         VerticalAlignment="Center"
+                                         Margin="0,0,12,0" />
+
+                                <Button Grid.Column="1"
+                                        Content="Browse"
+                                        Command="{Binding BrowseOutputWorkbookCommand}"
+                                        Background="{StaticResource AccentDarkBrush}" />
+                            </Grid>
+
+                            <Button Grid.Column="1"
+                                    Content="Export Template"
+                                    Command="{Binding ExportWorkbookCommand}"
+                                    IsEnabled="{Binding IsButtonEnabled}"
+                                    Width="170"
+                                    Height="36"
+                                    Margin="16,0,0,0"
+                                    VerticalAlignment="Center"
+                                    HorizontalAlignment="Right"
+                                    Background="{StaticResource AccentBrush}" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Upload Card -->
+                <Border Style="{StaticResource CardStyle}"
+                        Padding="20"
+                        Margin="0,0,0,16">
+                    <StackPanel>
+                        <TextBlock FontSize="14"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource PrimaryTextBrush}"
+                                   Text="Import Excel configuration" />
+
+                        <TextBlock Margin="0,6,0,14"
+                                   Foreground="{StaticResource SecondaryTextBrush}"
+                                   FontSize="12"
+                                   TextWrapping="Wrap"
+                                   Text="Select an Excel configuration workbook to process." />
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <Grid Grid.Column="0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="96" />
+                                </Grid.ColumnDefinitions>
+
+                                <TextBox Grid.Column="0"
+                                         Text="{Binding InputWorkbookPath, UpdateSourceTrigger=PropertyChanged}"
+                                         ToolTip="Upload Excel file path"
+                                         VerticalAlignment="Center"
+                                         Margin="0,0,12,0" />
+
+                                <Button Grid.Column="1"
+                                        Content="Browse"
+                                        Command="{Binding BrowseInputWorkbookCommand}"
+                                        Background="{StaticResource AccentDarkBrush}" />
+                            </Grid>
+
+                            <Button Grid.Column="1"
+                                    Content="Process Workbook"
+                                    Command="{Binding ProcessWorkbookCommand}"
+                                    IsEnabled="{Binding IsButtonEnabled}"
+                                    Width="170"
+                                    Height="36"
+                                    Margin="16,0,0,0"
+                                    VerticalAlignment="Center"
+                                    HorizontalAlignment="Right"
+                                    Background="{StaticResource AccentBrush}" />
+                        </Grid>
                     </StackPanel>
                 </Border>
 
                 <!-- Action Card -->
-                <Border Style="{StaticResource CardStyle}">
-                    <DockPanel>
-                        <CheckBox Content="Wait for close"
-                                  IsChecked="{Binding WaitForClose}"
-                                  VerticalAlignment="Center"
-                                  Foreground="#374151" />
-
-                        <Button Content="Process Workbook"
-                                Command="{Binding ProcessWorkbookCommand}"
-                                Width="170"
-                                HorizontalAlignment="Right"
-                                Background="{StaticResource AccentBrush}"
-                                DockPanel.Dock="Right" />
-                    </DockPanel>
-                </Border>
-
-                <!-- Status Card -->
-                <Border Style="{StaticResource CardStyle}">
-                    <DockPanel>
+                <Border Style="{StaticResource CardStyle}"
+                        Padding="20">
+                    <StackPanel>
                         <TextBlock Text="Status"
                                    FontWeight="SemiBold"
                                    Foreground="{StaticResource PrimaryTextBrush}"
-                                   Margin="0,0,12,0"
-                                   DockPanel.Dock="Left" />
+                                   Margin="0,0,0,6" />
                         <TextBlock Text="{Binding StatusMessage}"
                                    Foreground="#4B5563"
-                                   TextWrapping="Wrap" />
-                    </DockPanel>
+                                   TextWrapping="Wrap"
+                                   LineHeight="18" />
+                    </StackPanel>
                 </Border>
 
             </StackPanel>

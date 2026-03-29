@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Diagnostics;
+using System.Text;
 using ClosedXML.Excel;
 using SchedulePlanner.Core;
 
@@ -6,7 +7,7 @@ namespace SchedulePlanner.ImportExport.Excel;
 
 public static class ExcelSchedulerConfigWriter
 {
-    public static string WriteWorkbook(this SchedulerConfig data, string filePath)
+    public static string WriteWorkbook(this SchedulerOptions data, string filePath)
     {
         if (data == null || string.IsNullOrWhiteSpace(filePath))
         {
@@ -21,28 +22,27 @@ public static class ExcelSchedulerConfigWriter
         workbook.AddWorksheet(data.Departments, nameof(data.Departments));
         workbook.AddWorksheet(data.TeacherDepartments, nameof(data.TeacherDepartments));
 
-        var fileName = new StringBuilder(Path.GetFileNameWithoutExtension(filePath));
-        fileName.Append(DateTime.Now.ToDateTimeName("_"));
-        fileName.Append(Path.GetExtension(filePath));
-        var directory = Path.GetDirectoryName(filePath) ?? string.Empty;
-        var fullPath = Path.Combine(directory, fileName.ToString());
-
-        var fileInfo = new FileInfo(fullPath);
+        var fileInfo = new FileInfo(filePath);
         if (fileInfo.Directory != null && !fileInfo.Directory.Exists)
         {
             fileInfo.Directory.Create();
         }
 
+        var fullPath = fileInfo.FullName;
         if (fileInfo.IsFileLocked())
         {
-            throw new IOException($"The file '{fileInfo.FullName}' is currently in use. Please close it and try again.");
+            var fileName = new StringBuilder(Path.GetFileNameWithoutExtension(filePath));
+            fileName.Append(DateTime.Now.ToDateTimeName("_"));
+            fileName.Append(Path.GetExtension(filePath));
+            var directory = Path.GetDirectoryName(filePath) ?? string.Empty;
+            fullPath = Path.Combine(directory, fileName.ToString());
         }
 
-        workbook.SaveAs(fileInfo.FullName);
-        return fileInfo.FullName;
+        workbook.SaveAs(fullPath);
+        return fullPath;
     }
 
-    private static void AddSettingsWorksheet(this XLWorkbook workbook, SchedulerConfig data)
+    private static void AddSettingsWorksheet(this XLWorkbook workbook, SchedulerOptions data)
     {
         var metadata = new Dictionary<string, XLCellValue>
         {
@@ -50,7 +50,7 @@ public static class ExcelSchedulerConfigWriter
             [nameof(data.RoomChangePenalty)] = data.RoomChangePenalty,
             [nameof(data.SolverTimeLimitSeconds)] = data.SolverTimeLimitSeconds,
         };
-        workbook.AddWorksheet(metadata, SchedulerConfig.SettingsName);
+        workbook.AddWorksheet(metadata, SchedulerOptions.SettingsName);
     }
 
     public static void AddWorksheet<T>(this IXLWorkbook workbook, IEnumerable<T> data, string name)
@@ -70,6 +70,7 @@ public static class ExcelSchedulerConfigWriter
         }
         catch
         {
+            Debug.WriteLine($"The file '{file.FullName}' is currently in use. Please close it and try again.");
             return true;
         }
     }

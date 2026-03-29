@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using System.Reflection;
+using System.Windows;
 
 namespace SchedulePlanner.Wpf
 {
@@ -10,6 +11,8 @@ namespace SchedulePlanner.Wpf
         public MainWindow()
         {
             InitializeComponent();
+            var version = Assembly.GetExecutingAssembly().GetName().Version ?? new Version(1, 0, 0);
+            Title += $" - Version {version.Major}.{version.Minor}.{version.Build}";
         }
     }
 }
