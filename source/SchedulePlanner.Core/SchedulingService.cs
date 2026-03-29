@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using Google.OrTools.Sat;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace SchedulePlanner.Core
@@ -16,10 +17,10 @@ namespace SchedulePlanner.Core
         private readonly SchedulerConfig _config;
         private readonly ILogger<SchedulingService> _logger;
 
-        public SchedulingService(IOptions<SchedulerConfig> config, ILogger<SchedulingService> logger)
+        public SchedulingService(IOptions<SchedulerConfig> config, ILogger<SchedulingService>? logger = null)
         {
             _config = config.Value;
-            _logger = logger;
+            _logger = logger ?? NullLogger<SchedulingService>.Instance;
         }
 
         public Task RunAsync(CancellationToken cancellationToken = default)

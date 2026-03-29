@@ -5,26 +5,20 @@ using CsvHelper;
 
 namespace SchedulePlanner.ImportExport.Excel
 {
-    public enum ExportFileType
-    {
-        Csv = 0,
-        Xlsx = 1,
-    }
-
     public static class ExportHelperCsvExcel
     {
         private const string ExcelDateTimeFormat = "dd/MM/yyyy HH:mm:ss";
 
-        private static Dictionary<ExportFileType, string> _suffix = new Dictionary<ExportFileType, string>()
+        private static Dictionary<ImportExportFileType, string> _suffix = new Dictionary<ImportExportFileType, string>()
         {
-            { ExportFileType.Csv, ".csv" },
-            { ExportFileType.Xlsx, ".xlsx" },
+            { ImportExportFileType.Csv, ".csv" },
+            { ImportExportFileType.Xlsx, ".xlsx" },
         };
 
         public static string ToDateTimeName(this DateTime dateTime) =>
             string.Format("{0:yyyyMMdd_HHmmss}", dateTime);
 
-        public static bool TryGetFile(this ExportFileType fileType, ref string filePath)
+        public static bool TryGetFile(this ImportExportFileType fileType, ref string filePath)
         {
             if (_suffix.TryGetValue(fileType, out var suffix))
                 filePath += suffix;
@@ -37,19 +31,19 @@ namespace SchedulePlanner.ImportExport.Excel
         }
 
         public static void WriteToFile<T>(this IEnumerable<T> data, string filePath, string fileName = "",
-            ExportFileType fileType = ExportFileType.Xlsx, int[]? hideColumnIndex = null, int[]? dateColumnIndex = null)
+            ImportExportFileType fileType = ImportExportFileType.Xlsx, int[]? hideColumnIndex = null, int[]? dateColumnIndex = null)
         {
             string fullPath = Path.Combine(filePath, fileName);
 
             if (_suffix.TryGetValue(fileType, out var suffix))
                 ValidateExtension(ref fullPath, suffix);
 
-            if (fileType.Equals(ExportFileType.Xlsx))
+            if (fileType.Equals(ImportExportFileType.Xlsx))
             {
-                using (var workbook = data.WriteToWorkbook(hideColumnIndex, dateColumnIndex))
+                using (var workbook = data.CreateWorkbook(hideColumnIndex, dateColumnIndex))
                     workbook.SaveAs(fullPath);
             }
-            else if (fileType.Equals(ExportFileType.Csv))
+            else if (fileType.Equals(ImportExportFileType.Csv))
             {
                 using (var writer = new StreamWriter(fullPath, false))
                 using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
@@ -67,9 +61,9 @@ namespace SchedulePlanner.ImportExport.Excel
 
         public static string WriteToExcel<T>(this IEnumerable<T> data, string filePath, params int[] hideColumnIndex)
         {
-            if (_suffix.TryGetValue(ExportFileType.Xlsx, out var suffix))
+            if (_suffix.TryGetValue(ImportExportFileType.Xlsx, out var suffix))
                 filePath = GetValidatedFileName(filePath, suffix);
-            using (var workbook = data.WriteToWorkbook(hideColumnIndex))
+            using (var workbook = data.CreateWorkbook(hideColumnIndex))
                 workbook.SaveAs(filePath);
             return filePath;
         }
@@ -79,32 +73,66 @@ namespace SchedulePlanner.ImportExport.Excel
             var outputStream = new MemoryStream();
             if (string.IsNullOrEmpty(fileName))
                 fileName = DateTime.Now.ToDateTimeName();
-            if (_suffix.TryGetValue(ExportFileType.Xlsx, out var suffix))
+            if (_suffix.TryGetValue(ImportExportFileType.Xlsx, out var suffix))
                 fileName = GetValidatedFileName(fileName, suffix);
-            using (var workbook = data.WriteToWorkbook(hideColumnIndex))
+            using (var workbook = data.CreateWorkbook(hideColumnIndex))
                 workbook.SaveAs(outputStream);
             outputStream.Position = 0;
             return outputStream;
         }
 
-        public static XLWorkbook WriteToWorkbook<T>(this IEnumerable<T> data, int[]? hideColumnIndex = null, int[]? dateColumnIndex = null)
+        public static XLWorkbook CreateWorkbook<T>(
+            this IEnumerable<T> data,
+            int[]? hideColumnIndex = null,
+            int[]? dateColumnIndex = null)
         {
             var workbook = new XLWorkbook();
-            if (!data.IsNullOrEmpty())
-            {
-                workbook.Worksheets.Add(data.CreateDataTable())
-                    .Columns().AdjustToContents();
-                var ws = workbook.Worksheets.FirstOrDefault();
-                if (ws is null)
-                    return workbook;
-                if (hideColumnIndex?.Length > 0)
-                    foreach (var toHide in hideColumnIndex)
-                        ws.Column(toHide).Hide();
-                if (dateColumnIndex?.Length > 0)
-                    foreach (var toDate in dateColumnIndex)
-                        ws.Column(toDate).Style.DateFormat.Format = ExcelDateTimeFormat;
-            }
+            workbook.AddWorksheet(data, hideColumnIndex, dateColumnIndex);
             return workbook;
+        }
+
+        public static void AddWorksheet<T>(
+            this XLWorkbook workbook,
+            IEnumerable<T> data,
+            int[]? hideColumnIndex = null,
+            int[]? dateColumnIndex = null)
+        {
+            if (workbook == null || data.IsNullOrEmpty())
+                return;
+            var ws = workbook.AddWorksheet();
+            ws.FirstCell().InsertTable(data);
+            ws.Columns().AdjustToContents();
+            if (hideColumnIndex?.Length > 0)
+                foreach (var toHide in hideColumnIndex)
+                    ws.Column(toHide).Hide();
+            if (dateColumnIndex?.Length > 0)
+                foreach (var toDate in dateColumnIndex)
+                    ws.Column(toDate).Style.DateFormat.Format = ExcelDateTimeFormat;
+        }
+
+        public static void AddKeyValueTable(
+            this IXLWorksheet ws,
+            IEnumerable<KeyValuePair<string, XLCellValue>> rows,
+            string header1 = "Key",
+            string header2 = "Value")
+        {
+            var row = 1;
+            ws.Cell(row, 1).Value = header1;
+            ws.Cell(row, 2).Value = header2;
+
+            foreach (var item in rows)
+            {
+                row++;
+                ws.Cell(row, 1).Value = item.Key;
+                ws.Cell(row, 2).Value = item.Value;
+            }
+        }
+
+        public static void InsertWorksheetTable<T>(this IXLWorkbook wb, IEnumerable<T> data, string name)
+        {
+            var ws = wb.AddWorksheet();
+            ws.FirstCell().InsertTable(data, name);
+            ws.Columns().AdjustToContents();
         }
 
         public static bool IsFileLocked(this FileInfo file)

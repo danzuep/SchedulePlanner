@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SchedulePlanner.Core;
+using SchedulePlanner.ImportExport.Excel;
 
 public sealed record CsvOptions
 {
@@ -197,25 +198,5 @@ public sealed class CsvSchedulerConfigBuilder : ICsvSchedulerConfigBuilder
         }
 
         return result;
-    }
-}
-
-public static class ServiceCollectionExtensions
-{
-    public static IServiceCollection AddCsvSchedulerSources(this IServiceCollection services, IConfiguration configuration)
-    {
-        if (services == null)
-        {
-            throw new ArgumentNullException(nameof(services));
-        }
-        if (configuration == null)
-        {
-            throw new ArgumentNullException(nameof(configuration));
-        }
-
-        services.Configure<CsvOptions>(configuration.GetSection(CsvOptions.SectionName));
-        services.AddTransient<ICsvSchedulerConfigBuilder, CsvSchedulerConfigBuilder>();
-        services.AddSingleton<IFileSystem, FileSystem>();
-        return services;
     }
 }

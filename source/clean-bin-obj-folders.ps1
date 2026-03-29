@@ -1,0 +1,1 @@
+Get-ChildItem .\ -include bin,obj -Recurse | ForEach-Object { Remove-Item $_.FullName -Force -Recurse }

@@ -5,28 +5,36 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SchedulePlanner.Core;
 using SchedulePlanner.ImportExport;
-using SchedulePlanner.ImportExport.Csv;
 
-internal static class Program
+public static partial class Program
 {
     [ExcludeFromCodeCoverage]
     public static async Task Main(string[] args)
     {
-        using var host = CreateConsoleHost(args);
-        await host.RunAsync();
+        using var host = Host.CreateDefaultBuilder()
+            .InitialiseBuilderDefaults()
+            .ConfigureServices(Initialise)
+            .Build();
 
-        Console.WriteLine("Press any key to exit...");
-        Console.ReadKey();
+        var exportService = host.Services.GetRequiredService<ExportService>();
+        await exportService.RunAsync();
+
+        //Console.WriteLine("Press any key to exit...");
+        //Console.ReadKey();
     }
 
-    public static IHost CreateConsoleHost(params string[] args)
+    public static void Initialise(HostBuilderContext context, IServiceCollection services)
     {
-        return Host.CreateDefaultBuilder()
+        services.AddSingleton<ExportService>();
+    }
+
+    public static IHostBuilder InitialiseBuilderDefaults(this IHostBuilder builder, params string[] args)
+    {
+        return builder
             .ConfigureAppConfiguration(InitialiseConfiguration)
             .ConfigureServices(InitialiseServices)
             .ConfigureLogging(InitialiseLogging)
-            .UseConsoleLifetime()
-            .Build();
+            .UseConsoleLifetime();
 
         void InitialiseConfiguration(IConfigurationBuilder builder) =>
             builder.AddCommandLineSwitchMappings(args);
@@ -35,7 +43,7 @@ internal static class Program
         {
             services.AddSchedulingService(context.Configuration);
             services.AddCsvSchedulerSources(context.Configuration);
-            services.AddHostedService<Worker>();
+            services.AddExcelSchedulerSources(context.Configuration);
         }
 
         void InitialiseLogging(ILoggingBuilder builder) =>
@@ -46,34 +54,21 @@ internal static class Program
             });
     }
 
-    public static IConfigurationBuilder AddCommandLineSwitchMappings(this IConfigurationBuilder builder, params string[] args)
+    private static IConfigurationBuilder AddCommandLineSwitchMappings(this IConfigurationBuilder builder, params string[] args)
     {
-        if (builder == null)
-        {
-            throw new ArgumentNullException(nameof(builder));
-        }
-        var switchMappings = new Dictionary<string, string>()
-        {
-            { "--BlocksPerDay", $"{SchedulerConfig.SectionName}:{nameof(SchedulerConfig.BlocksPerDay)}" },
-            { "--RoomChangePenalty", $"{SchedulerConfig.SectionName}:{nameof(SchedulerConfig.RoomChangePenalty)}" }
-        };
+        var switchMappings = new Dictionary<string, string>();
+        MapCli(nameof(SchedulerConfig.BlocksPerDay));
+        MapCli(nameof(SchedulerConfig.RoomChangePenalty));
         builder.AddCommandLine(args, switchMappings);
         return builder;
-    }
 
-    [ExcludeFromCodeCoverage]
-    public class Worker : BackgroundService
-    {
-        private readonly IService _processExecutionService;
-
-        public Worker(IService processExecutionService)
+        void MapCli(string key)
         {
-            _processExecutionService = processExecutionService;
+            var map = GetSwitchMapping(key);
+            switchMappings.Add(map.Key, map.Value);
         }
 
-        protected override async Task ExecuteAsync(CancellationToken cancellationToken)
-        {
-            await _processExecutionService.RunAsync(cancellationToken).ConfigureAwait(false);
-        }
+        static KeyValuePair<string, string> GetSwitchMapping(string key) =>
+            new($"--{key}", $"{SchedulerConfig.SectionName}:{key}");
     }
 }

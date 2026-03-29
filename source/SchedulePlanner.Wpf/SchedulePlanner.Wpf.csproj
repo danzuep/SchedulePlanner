@@ -9,14 +9,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <!--<PackageReference Include="CommunityToolkit.Diagnostics" Version="8.4.2" />-->
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.5" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.5" />
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.5" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\SchedulePlanner.ImportExport\1-SchedulePlanner.ImportExport.csproj" />
+    <ProjectReference Include="..\SchedulePlanner.ImportExport\SchedulePlanner.ImportExport.csproj" />
   </ItemGroup>
 
 </Project>

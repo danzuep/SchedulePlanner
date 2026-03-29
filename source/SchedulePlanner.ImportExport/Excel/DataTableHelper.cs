@@ -41,4 +41,22 @@ internal static class DataTableHelper
             return dataTable;
         }
     }
+
+    public static DataTable CreateDataTable(
+        this IEnumerable<DataRow> rows,
+        IEnumerable<DataColumn>? headings = null)
+    {
+        var table = new DataTable();
+
+        headings ??=
+        [
+            table.Columns.Add("Key", typeof(string)),
+            table.Columns.Add("Value", typeof(object))
+        ];
+
+        foreach (var row in rows)
+            table.Rows.Add(row);
+
+        return table;
+    }
 }

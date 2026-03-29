@@ -1,6 +1,8 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using System.IO.Abstractions;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SchedulePlanner.Core;
+using SchedulePlanner.ImportExport.Csv;
 using SchedulePlanner.ImportExport.Excel;
 
 namespace SchedulePlanner.ImportExport;
@@ -20,6 +22,19 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    public static IServiceCollection AddCsvSchedulerSources(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        if (services == null) throw new ArgumentNullException(nameof(services));
+        if (configuration == null) throw new ArgumentNullException(nameof(configuration));
+
+        services.Configure<CsvOptions>(configuration.GetSection(CsvOptions.SectionName));
+        services.AddTransient<ICsvSchedulerConfigBuilder, CsvSchedulerConfigBuilder>();
+        services.AddSingleton<IFileSystem, FileSystem>();
+        return services;
+    }
+
     public static IServiceCollection AddExcelSchedulerSources(
         this IServiceCollection services,
         IConfiguration configuration)
@@ -28,9 +43,8 @@ public static class ServiceCollectionExtensions
         if (configuration == null) throw new ArgumentNullException(nameof(configuration));
 
         services.Configure<ExcelOptions>(configuration.GetSection(ExcelOptions.SectionName));
+        services.Configure<ImportExportConfig>(configuration.GetSection(ImportExportConfig.SectionName));
         services.AddTransient<IExcelSchedulerConfigBuilder, ExcelSchedulerConfigBuilder>();
         return services;
     }
-
-    //extension<IServiceCollection>(IServiceCollection services) { }
 }
