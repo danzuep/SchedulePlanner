@@ -2,7 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using Google.OrTools.Sat;
 using Microsoft.Extensions.Options;
 
 public sealed record SchedulerOptions : IOptions<SchedulerOptions>
@@ -87,21 +86,3 @@ public sealed record PresetBlockConfig(
     int Index,
     string Name,
     IReadOnlyList<DayOfWeek> Days);
-
-internal sealed record RoomChangePenalty(
-    BoolVar Var,
-    string TeacherId,
-    DayOfWeek Day,
-    int Block,
-    string FromClassKey,
-    string FromRoom,
-    string ToClassKey,
-    string ToRoom);
-
-internal sealed record ScheduleSpreadPenalty(
-    BoolVar Var,
-    string TeacherId,
-    DayOfWeek Day,
-    int Block,
-    string FromClassKey,
-    string ToClassKey);

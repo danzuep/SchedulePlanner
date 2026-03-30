@@ -30,8 +30,6 @@ namespace SchedulePlanner.Wpf.Helpers
             _logger = logger ?? NullLogger.Instance;
         }
 
-        public IDisposable BeginScope<TState>(TState state) => NullScope.Instance;
-
         public bool IsEnabled(LogLevel logLevel) => logLevel != LogLevel.None;
 
         public void Log<TState>(
@@ -130,6 +128,9 @@ namespace SchedulePlanner.Wpf.Helpers
             if (_fileSystem.File.Exists(_filePath))
                 _fileSystem.File.Delete(_filePath);
         }
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull =>
+            NullScope.Instance;
 
         public void Dispose()
         {
