@@ -7,7 +7,10 @@ namespace SchedulePlanner.ImportExport.Excel;
 
 public static class ExcelSchedulerConfigWriter
 {
-    public static string WriteWorkbook(this ScheduleResult data, string filePath, bool addTimestamp = false)
+    public static string WriteWorkbook(
+        this ScheduleResult data,
+        string filePath,
+        bool addTimestamp = false)
     {
         if (data == null || string.IsNullOrWhiteSpace(filePath))
         {
@@ -16,12 +19,10 @@ public static class ExcelSchedulerConfigWriter
 
         using var workbook = new XLWorkbook();
 
-        foreach (var schedule in data.TeacherSchedules)
+        foreach (var teacher in data.TeacherSchedules)
         {
-            foreach (var day in schedule.Days)
-            {
-                workbook.AddWorksheet(day.Blocks, $"{schedule.TeacherName}-{day.Day}");
-            }
+            var weekSchedule = teacher.ToWeekSchedule();
+            workbook.AddWorksheet(weekSchedule.Blocks, $"{teacher.TeacherName}");
         }
 
         var fileInfo = new FileInfo(filePath);

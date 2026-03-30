@@ -43,6 +43,18 @@ namespace SchedulePlanner.Core
 
             AddSchedulingRules(context, variables, cancellationToken);
             var penalties = AddRoomChangeOptimization(context, variables, normalized.RoomChangePenalty, cancellationToken);
+            var spreadPenalties = AddScheduleSpreadOptimization(context, variables, normalized.ScheduleSpreadPenalty, cancellationToken);
+
+            // Combine both penalties for minimization
+            var allPenaltyVars = penalties.Select(x => x.Var)
+                .Concat(spreadPenalties.Select(x => x.Var))
+                .ToArray();
+            var allPenaltyWeights = Enumerable.Repeat(normalized.RoomChangePenalty, penalties.Count)
+                .Concat(Enumerable.Repeat(normalized.ScheduleSpreadPenalty, spreadPenalties.Count))
+                .ToArray();
+
+            context.Model.Minimize(
+                LinearExpr.WeightedSum(allPenaltyVars.Cast<LinearExpr>(), allPenaltyWeights));
 
             var solver = CreateSolver(normalized.SolverTimeLimitSeconds);
             var status = solver.Solve(context.Model);
@@ -99,7 +111,14 @@ namespace SchedulePlanner.Core
                 _logger.LogWarning("RoomChangePenalty must be non-negative; falling back to zero.");
             }
 
-            return new NormalizedSettings(solverTimeLimitSeconds, roomChangePenalty);
+            var scheduleSpreadPenalty = Math.Max(0, _config.ScheduleSpreadPenalty);
+
+            if (_config.ScheduleSpreadPenalty < 0)
+            {
+                _logger.LogWarning("ScheduleSpreadPenalty must be non-negative; falling back to zero.");
+            }
+
+            return new NormalizedSettings(solverTimeLimitSeconds, roomChangePenalty, scheduleSpreadPenalty);
         }
 
         private SchedulingContext BuildSchedulingContext(CancellationToken cancellationToken)
@@ -150,6 +169,54 @@ namespace SchedulePlanner.Core
             RequireEachClassToBeScheduledForItsWeeklyBlocks(context, variables, cancellationToken);
             PreventTeachersFromBeingDoubleBooked(context, variables, cancellationToken);
             PreventRoomsFromBeingDoubleBooked(context, variables, cancellationToken);
+            PreventSchedulingInDefaultBlocks(context, variables, cancellationToken);
+        }
+
+        private void PreventSchedulingInDefaultBlocks(
+            SchedulingContext context,
+            ScheduleVariables variables,
+            CancellationToken cancellationToken)
+        {
+            if (_config.PresetBlocks == null || !_config.PresetBlocks.Any())
+            {
+                return;
+            }
+
+            foreach (var defaultBlock in _config.PresetBlocks)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (defaultBlock.Index < 0 || defaultBlock.Index >= context.BlocksPerDay)
+                {
+                    continue;
+                }
+
+                foreach (var day in defaultBlock.Days)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    var dayIndex = -1;
+                    for (var i = 0; i < _config.Days.Count; i++)
+                    {
+                        if (_config.Days[i] == day)
+                        {
+                            dayIndex = i;
+                            break;
+                        }
+                    }
+
+                    if (dayIndex < 0)
+                    {
+                        continue;
+                    }
+
+                    foreach (var entry in context.ClassAssignments)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        context.Model.Add(variables.Assignment[entry.Index, dayIndex, defaultBlock.Index] == 0);
+                    }
+                }
+            }
         }
 
         private void RequireEachClassToBeScheduledForItsWeeklyBlocks(
@@ -305,11 +372,67 @@ namespace SchedulePlanner.Core
                 }
             }
 
-            var penaltyVars = penalties.Select(x => x.Var).ToArray();
-            var penaltyWeights = Enumerable.Repeat(roomChangePenaltyWeight, penaltyVars.Length).ToArray();
+            return penalties;
+        }
 
-            context.Model.Minimize(
-                LinearExpr.WeightedSum(penaltyVars.Cast<LinearExpr>(), penaltyWeights));
+        private IReadOnlyList<ScheduleSpreadPenalty> AddScheduleSpreadOptimization(
+            SchedulingContext context,
+            ScheduleVariables variables,
+            int scheduleSpreadPenaltyWeight,
+            CancellationToken cancellationToken)
+        {
+            var penalties = new List<ScheduleSpreadPenalty>();
+
+            for (var day = 0; day < context.NumDays; ++day)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                for (var block = 0; block < context.BlocksPerDay - 2; ++block)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    foreach (var teacherEntry in context.TeacherGroups)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        var teacherId = teacherEntry.Key;
+                        var classes = teacherEntry.Value.Classes;
+
+                        foreach (var current in classes)
+                        {
+                            cancellationToken.ThrowIfCancellationRequested();
+
+                            foreach (var next in classes)
+                            {
+                                cancellationToken.ThrowIfCancellationRequested();
+
+                                if (current == next)
+                                {
+                                    continue;
+                                }
+
+                                var penaltyVar = context.Model.NewBoolVar(
+                                    $"schedule_spread_{teacherId}_day{day}_block{block}_{current.Config.Key}_{next.Config.Key}");
+
+                                context.Model.Add(penaltyVar <= variables.Assignment[current.Index, day, block]);
+                                context.Model.Add(penaltyVar <= variables.Assignment[next.Index, day, block + 2]);
+                                context.Model.Add(
+                                    penaltyVar >= variables.Assignment[current.Index, day, block]
+                                                + variables.Assignment[next.Index, day, block + 2]
+                                                - 1);
+
+                                penalties.Add(new ScheduleSpreadPenalty(
+                                    penaltyVar,
+                                    teacherId,
+                                    _config.Days[day],
+                                    block,
+                                    current.Config.Key,
+                                    next.Config.Key));
+                            }
+                        }
+                    }
+                }
+            }
 
             return penalties;
         }
@@ -345,26 +468,40 @@ namespace SchedulePlanner.Core
                     {
                         var blocks = new List<BlockScheduleResult>();
 
-                        for (var block = 0; block < context.BlocksPerDay; ++block)
+                        for (var blockIndex = 0; blockIndex < context.BlocksPerDay; ++blockIndex)
                         {
-                            var assigned = teacherEntry.Classes.FirstOrDefault(entry =>
-                                solver.BooleanValue(variables.Assignment[entry.Index, day, block]));
-
-                            blocks.Add(assigned is not null
-                                ? new BlockScheduleResult(
-                                    block,
+                            if (teacherEntry.Classes.FirstOrDefault(entry =>
+                                solver.BooleanValue(variables.Assignment[entry.Index, day, blockIndex])) is ClassAssignment assigned)
+                            {
+                                blocks.Add(new BlockScheduleResult(
+                                    blockIndex,
                                     false,
                                     assigned.Config.Key,
                                     assigned.Config.Name,
                                     assigned.Room,
-                                    assigned.Config.Department)
-                                : new BlockScheduleResult(
-                                    block,
+                                    assigned.Config.Department));
+                            }
+                            else if (_config.PresetBlocks.FirstOrDefault(b => b.Index == blockIndex &&
+                                b.Days.Contains(_config.Days[day])) is PresetBlockConfig presetBlock)
+                            {
+                                blocks.Add(new BlockScheduleResult(
+                                    blockIndex,
+                                    false,
+                                    presetBlock.Name,
+                                    presetBlock.Name,
+                                    null,
+                                    "Preset"));
+                            }
+                            else
+                            {
+                                blocks.Add(new BlockScheduleResult(
+                                    blockIndex,
                                     true,
                                     null,
                                     null,
                                     null,
                                     null));
+                            }
                         }
 
                         days.Add(new DayScheduleResult(_config.Days[day], blocks));
@@ -591,20 +728,20 @@ namespace SchedulePlanner.Core
 
         private static string ResolveRoom(Class cls, Teacher teacher)
         {
-            if (!string.IsNullOrWhiteSpace(cls.PreferredRoom))
-            {
-                return cls.PreferredRoom;
-            }
-
             if (!string.IsNullOrWhiteSpace(teacher.PreferredRoom))
             {
                 return teacher.PreferredRoom;
             }
 
+            if (!string.IsNullOrWhiteSpace(cls.PreferredRoom))
+            {
+                return cls.PreferredRoom;
+            }
+
             return string.Empty;
         }
 
-        private sealed record NormalizedSettings(double SolverTimeLimitSeconds, int RoomChangePenalty);
+        private sealed record NormalizedSettings(double SolverTimeLimitSeconds, int RoomChangePenalty, int ScheduleSpreadPenalty);
 
         private sealed record SchedulingContext(
             CpModel Model,
@@ -667,4 +804,111 @@ namespace SchedulePlanner.Core
         string FromRoom,
         string ToClassKey,
         string ToRoom);
+
+    public sealed record WeekScheduleResult(
+        Teacher Teacher,
+        IReadOnlyList<ScheduleBlockResult> Blocks);
+
+    public sealed record ScheduleBlockResult(
+        BlockMetadata Block,
+        ClassMetadata? Monday,
+        ClassMetadata? Tuesday,
+        ClassMetadata? Wednesday,
+        ClassMetadata? Thursday,
+        ClassMetadata? Friday);
+
+    public sealed record BlockMetadata(
+        int Block,
+        string BlockName,
+        string? BlockTimeRange,
+        string? Room)
+    {
+        public override string ToString() => BlockName;
+    }
+
+    public sealed record ClassMetadata(
+        string ClassKey,
+        string ClassName,
+        string Department,
+        string? Room)
+    {
+        public override string ToString() => ClassKey;
+    }
+
+    public static class TeacherScheduleResultExtensions
+    {
+        public static WeekScheduleResult ToWeekSchedule(this TeacherScheduleResult teacherSchedule)
+        {
+            var blocks = new List<ScheduleBlockResult>();
+            
+            // Get the maximum block count from the first day (assuming all days have same blocks)
+            var maxBlocks = teacherSchedule.Days.Any()
+                ? teacherSchedule.Days.Max(d => d.Blocks.Count)
+                : 0;
+
+            for (var blockIndex = 0; blockIndex < maxBlocks; blockIndex++)
+            {
+                var blockMetadata = new BlockMetadata(
+                    blockIndex,
+                    $"Period {blockIndex + 1}",
+                    null, // BlockTimeRange not available in current config
+                    null);
+
+                ClassMetadata? monday = null;
+                ClassMetadata? tuesday = null;
+                ClassMetadata? wednesday = null;
+                ClassMetadata? thursday = null;
+                ClassMetadata? friday = null;
+
+                foreach (var day in teacherSchedule.Days)
+                {
+                    if (blockIndex >= day.Blocks.Count) continue;
+
+                    var block = day.Blocks[blockIndex];
+                    if (block.IsFree) continue;
+
+                    var classMetadata = new ClassMetadata(
+                        block.ClassKey!,
+                        block.ClassName!,
+                        block.Department!,
+                        block.Room);
+
+                    switch (day.Day)
+                    {
+                        case DayOfWeek.Monday:
+                            monday = classMetadata;
+                            break;
+                        case DayOfWeek.Tuesday:
+                            tuesday = classMetadata;
+                            break;
+                        case DayOfWeek.Wednesday:
+                            wednesday = classMetadata;
+                            break;
+                        case DayOfWeek.Thursday:
+                            thursday = classMetadata;
+                            break;
+                        case DayOfWeek.Friday:
+                            friday = classMetadata;
+                            break;
+                    }
+                }
+
+                blocks.Add(new ScheduleBlockResult(
+                    blockMetadata,
+                    monday,
+                    tuesday,
+                    wednesday,
+                    thursday,
+                    friday));
+            }
+
+            var teacher = new Teacher
+            {
+                Id = teacherSchedule.TeacherId,
+                FullName = teacherSchedule.TeacherName
+            };
+
+            return new WeekScheduleResult(teacher, blocks);
+        }
+    }
 }
