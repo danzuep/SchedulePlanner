@@ -18,7 +18,7 @@ public static class ServiceCollectionExtensions
 
         services.Configure<SchedulerOptions>(configuration.GetSection(SchedulerOptions.SectionName));
         services.AddSingleton<SchedulingService>();
-        services.AddSingleton<IService>(provider => provider.GetRequiredService<SchedulingService>());
+        services.AddSingleton<IService<ScheduleResult>>(provider => provider.GetRequiredService<SchedulingService>());
         return services;
     }
 

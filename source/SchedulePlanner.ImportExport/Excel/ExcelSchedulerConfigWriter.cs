@@ -7,7 +7,44 @@ namespace SchedulePlanner.ImportExport.Excel;
 
 public static class ExcelSchedulerConfigWriter
 {
-    public static string WriteWorkbook(this SchedulerOptions data, string filePath)
+    public static string WriteWorkbook(this ScheduleResult data, string filePath, bool addTimestamp = false)
+    {
+        if (data == null || string.IsNullOrWhiteSpace(filePath))
+        {
+            return string.Empty;
+        }
+
+        using var workbook = new XLWorkbook();
+
+        foreach (var schedule in data.TeacherSchedules)
+        {
+            foreach (var day in schedule.Days)
+            {
+                workbook.AddWorksheet(day.Blocks, $"{schedule.TeacherName}-{day.Day}");
+            }
+        }
+
+        var fileInfo = new FileInfo(filePath);
+        if (fileInfo.Directory != null && !fileInfo.Directory.Exists)
+        {
+            fileInfo.Directory.Create();
+        }
+
+        var fullPath = fileInfo.FullName;
+        if (addTimestamp || fileInfo.IsFileLocked())
+        {
+            var fileName = new StringBuilder(Path.GetFileNameWithoutExtension(filePath));
+            fileName.Append(DateTime.Now.ToDateTimeName("_"));
+            fileName.Append(Path.GetExtension(filePath));
+            var directory = Path.GetDirectoryName(filePath) ?? string.Empty;
+            fullPath = Path.Combine(directory, fileName.ToString());
+        }
+
+        workbook.SaveAs(fullPath);
+        return fullPath;
+    }
+
+    public static string WriteWorkbook(this SchedulerOptions data, string filePath, bool addTimestamp = false)
     {
         if (data == null || string.IsNullOrWhiteSpace(filePath))
         {
@@ -29,7 +66,7 @@ public static class ExcelSchedulerConfigWriter
         }
 
         var fullPath = fileInfo.FullName;
-        if (fileInfo.IsFileLocked())
+        if (addTimestamp || fileInfo.IsFileLocked())
         {
             var fileName = new StringBuilder(Path.GetFileNameWithoutExtension(filePath));
             fileName.Append(DateTime.Now.ToDateTimeName("_"));

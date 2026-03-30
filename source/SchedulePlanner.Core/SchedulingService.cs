@@ -11,9 +11,15 @@ namespace SchedulePlanner.Core
         Task RunAsync(CancellationToken cancellationToken = default);
     }
 
-    public sealed class SchedulingService : IService
+    public interface IService<T>
+    {
+        Task<T> RunAsync(CancellationToken cancellationToken = default);
+    }
+
+    public sealed class SchedulingService : IService<ScheduleResult>
     {
         public SchedulerOptions Config => _config;
+
         private readonly SchedulerOptions _config;
         private readonly ILogger<SchedulingService> _logger;
 
@@ -23,147 +29,268 @@ namespace SchedulePlanner.Core
             _logger = logger ?? NullLogger<SchedulingService>.Instance;
         }
 
-        public Task RunAsync(CancellationToken cancellationToken = default)
+        public Task<ScheduleResult> RunAsync(CancellationToken cancellationToken = default)
         {
-            var solverTimeLimitSeconds = ValidateConfig();
+            var normalized = ValidateAndNormalizeConfig();
+
+            _logger.LogInformation(
+                "Building timetable for {Days} days with {Blocks} blocks per day.",
+                _config.Days.Count,
+                _config.BlocksPerDay);
+
+            var context = BuildSchedulingContext(cancellationToken);
+            var variables = CreateDecisionVariables(context, cancellationToken);
+
+            AddSchedulingRules(context, variables, cancellationToken);
+            var penalties = AddRoomChangeOptimization(context, variables, normalized.RoomChangePenalty, cancellationToken);
+
+            var solver = CreateSolver(normalized.SolverTimeLimitSeconds);
+            var status = solver.Solve(context.Model);
+
+            var result = BuildResult(context, variables, penalties, solver, status);
+
+            LogResult(result);
+
+            return Task.FromResult(result);
+        }
+
+        private NormalizedSettings ValidateAndNormalizeConfig()
+        {
+            if (_config.Days == null || !_config.Days.Any())
+            {
+                throw new InvalidOperationException("You must specify at least one day in the Scheduler configuration.");
+            }
+
+            if (_config.BlocksPerDay <= 0)
+            {
+                throw new InvalidOperationException("BlocksPerDay must be greater than zero.");
+            }
+
+            if (_config.Classes == null || !_config.Classes.Any())
+            {
+                throw new InvalidOperationException("At least one class must be defined.");
+            }
+
+            if (_config.Teachers == null || !_config.Teachers.Any())
+            {
+                throw new InvalidOperationException("At least one teacher must be defined.");
+            }
+
+            if (_config.TeacherDepartments == null || !_config.TeacherDepartments.Any())
+            {
+                throw new InvalidOperationException("At least one department assignment is required.");
+            }
+
+            var solverTimeLimitSeconds = _config.SolverTimeLimitSeconds > 0
+                ? _config.SolverTimeLimitSeconds
+                : 10.0;
+
+            if (_config.SolverTimeLimitSeconds <= 0)
+            {
+                _logger.LogWarning(
+                    "SolverTimeLimitSeconds must be greater than zero; falling back to {DefaultTime} seconds.",
+                    solverTimeLimitSeconds);
+            }
+
             var roomChangePenalty = Math.Max(0, _config.RoomChangePenalty);
 
-            _logger.LogInformation("Building timetable for {Days} days with {Blocks} blocks per day.",
-                _config.Days.Count, _config.BlocksPerDay);
+            if (_config.RoomChangePenalty < 0)
+            {
+                _logger.LogWarning("RoomChangePenalty must be non-negative; falling back to zero.");
+            }
 
+            return new NormalizedSettings(solverTimeLimitSeconds, roomChangePenalty);
+        }
+
+        private SchedulingContext BuildSchedulingContext(CancellationToken cancellationToken)
+        {
             var classAssignments = BuildClassAssignments();
+            var teacherGroups = BuildTeacherGroups(classAssignments);
+            var roomGroups = BuildRoomGroups(classAssignments);
 
-            var model = new CpModel();
-            var numDays = _config.Days.Count;
-            var blocksPerDay = _config.BlocksPerDay;
-            var classCount = classAssignments.Count;
+            return new SchedulingContext(
+                new CpModel(),
+                classAssignments,
+                teacherGroups,
+                roomGroups,
+                _config.Days.Count,
+                _config.BlocksPerDay);
+        }
 
-            var assignment = new BoolVar[classCount, numDays, blocksPerDay];
-            for (var cls = 0; cls < classCount; ++cls)
+        private ScheduleVariables CreateDecisionVariables(SchedulingContext context, CancellationToken cancellationToken)
+        {
+            var assignment = new BoolVar[context.ClassAssignments.Count, context.NumDays, context.BlocksPerDay];
+
+            for (var cls = 0; cls < context.ClassAssignments.Count; ++cls)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                for (var day = 0; day < numDays; ++day)
+
+                for (var day = 0; day < context.NumDays; ++day)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    for (var block = 0; block < blocksPerDay; ++block)
+
+                    for (var block = 0; block < context.BlocksPerDay; ++block)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        assignment[cls, day, block] = model.NewBoolVar(
-                            $"assign_{classAssignments[cls].Config.Key}_day{day}_block{block}");
+
+                        assignment[cls, day, block] = context.Model.NewBoolVar(
+                            $"assign_{context.ClassAssignments[cls].Config.Key}_day{day}_block{block}");
                     }
                 }
             }
 
-            foreach (var entry in classAssignments)
+            return new ScheduleVariables(assignment);
+        }
+
+        private void AddSchedulingRules(
+            SchedulingContext context,
+            ScheduleVariables variables,
+            CancellationToken cancellationToken)
+        {
+            RequireEachClassToBeScheduledForItsWeeklyBlocks(context, variables, cancellationToken);
+            PreventTeachersFromBeingDoubleBooked(context, variables, cancellationToken);
+            PreventRoomsFromBeingDoubleBooked(context, variables, cancellationToken);
+        }
+
+        private void RequireEachClassToBeScheduledForItsWeeklyBlocks(
+            SchedulingContext context,
+            ScheduleVariables variables,
+            CancellationToken cancellationToken)
+        {
+            foreach (var entry in context.ClassAssignments)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var linear = new List<BoolVar>();
-                for (var day = 0; day < numDays; ++day)
+
+                var allSlots = new List<BoolVar>();
+
+                for (var day = 0; day < context.NumDays; ++day)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    for (var block = 0; block < blocksPerDay; ++block)
+
+                    for (var block = 0; block < context.BlocksPerDay; ++block)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        linear.Add(assignment[entry.Index, day, block]);
+                        allSlots.Add(variables.Assignment[entry.Index, day, block]);
                     }
                 }
 
-                if (entry.Config.WeeklyBlocks > numDays * blocksPerDay)
+                if (entry.Config.WeeklyBlocks > context.NumDays * context.BlocksPerDay)
                 {
                     throw new InvalidOperationException(
                         $"Class {entry.Config.Key} demands more blocks than available.");
                 }
 
-                model.Add(LinearExpr.Sum(linear) == entry.Config.WeeklyBlocks);
+                context.Model.Add(LinearExpr.Sum(allSlots) == entry.Config.WeeklyBlocks);
             }
+        }
 
-            var teacherGroups = classAssignments
-                .GroupBy(entry => entry.Teacher.Id, StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(
-                    g => g.Key,
-                    g => new TeacherGroup(g.First().Teacher, g.ToList()),
-                    StringComparer.OrdinalIgnoreCase);
-
-            foreach (var kvp in teacherGroups)
+        private void PreventTeachersFromBeingDoubleBooked(
+            SchedulingContext context,
+            ScheduleVariables variables,
+            CancellationToken cancellationToken)
+        {
+            foreach (var teacherGroup in context.TeacherGroups.Values)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var teacherAssignments = kvp.Value.Classes;
-                for (var day = 0; day < numDays; ++day)
+
+                for (var day = 0; day < context.NumDays; ++day)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    for (var block = 0; block < blocksPerDay; ++block)
+
+                    for (var block = 0; block < context.BlocksPerDay; ++block)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        var slots = teacherAssignments
-                            .Select(entry => assignment[entry.Index, day, block])
+
+                        var slots = teacherGroup.Classes
+                            .Select(entry => variables.Assignment[entry.Index, day, block])
                             .ToList();
 
                         if (slots.Count > 1)
                         {
-                            model.AddAtMostOne(slots);
+                            context.Model.AddAtMostOne(slots);
                         }
                     }
                 }
             }
+        }
 
-            var roomGroups = classAssignments
-                .GroupBy(entry => entry.Room, StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
-
-            foreach (var roomClasses in roomGroups.Values)
+        private void PreventRoomsFromBeingDoubleBooked(
+            SchedulingContext context,
+            ScheduleVariables variables,
+            CancellationToken cancellationToken)
+        {
+            foreach (var roomClasses in context.RoomGroups.Values)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                for (var day = 0; day < numDays; ++day)
+
+                for (var day = 0; day < context.NumDays; ++day)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    for (var block = 0; block < blocksPerDay; ++block)
+
+                    for (var block = 0; block < context.BlocksPerDay; ++block)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
+
                         var slots = roomClasses
-                            .Select(entry => assignment[entry.Index, day, block])
+                            .Select(entry => variables.Assignment[entry.Index, day, block])
                             .ToList();
 
                         if (slots.Count > 1)
                         {
-                            model.AddAtMostOne(slots);
+                            context.Model.AddAtMostOne(slots);
                         }
                     }
                 }
             }
+        }
 
-            var transitionPenalties = new List<RoomChangePenalty>();
-            for (var day = 0; day < numDays; ++day)
+        private IReadOnlyList<RoomChangePenalty> AddRoomChangeOptimization(
+            SchedulingContext context,
+            ScheduleVariables variables,
+            int roomChangePenaltyWeight,
+            CancellationToken cancellationToken)
+        {
+            var penalties = new List<RoomChangePenalty>();
+
+            for (var day = 0; day < context.NumDays; ++day)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                for (var block = 0; block < blocksPerDay - 1; ++block)
+
+                for (var block = 0; block < context.BlocksPerDay - 1; ++block)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    foreach (var teacherKvp in teacherGroups)
+
+                    foreach (var teacherEntry in context.TeacherGroups)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        var teacherId = teacherKvp.Key;
-                        var entries = teacherKvp.Value.Classes;
-                        foreach (var current in entries)
+
+                        var teacherId = teacherEntry.Key;
+                        var classes = teacherEntry.Value.Classes;
+
+                        foreach (var current in classes)
                         {
                             cancellationToken.ThrowIfCancellationRequested();
-                            foreach (var next in entries)
+
+                            foreach (var next in classes)
                             {
                                 cancellationToken.ThrowIfCancellationRequested();
+
                                 if (current.Room == next.Room)
                                 {
                                     continue;
                                 }
 
-                                var penaltyVar = model.NewBoolVar(
-                                    $"room_change_{teacherId}_day{day}_block{block}");
+                                var penaltyVar = context.Model.NewBoolVar(
+                                    $"room_change_{teacherId}_day{day}_block{block}_{current.Config.Key}_{next.Config.Key}");
 
-                                model.Add(penaltyVar <= assignment[current.Index, day, block]);
-                                model.Add(penaltyVar <= assignment[next.Index, day, block + 1]);
-                                model.Add(penaltyVar >= assignment[current.Index, day, block]
-                                                     + assignment[next.Index, day, block + 1]
-                                                     - 1);
+                                context.Model.Add(penaltyVar <= variables.Assignment[current.Index, day, block]);
+                                context.Model.Add(penaltyVar <= variables.Assignment[next.Index, day, block + 1]);
+                                context.Model.Add(
+                                    penaltyVar >= variables.Assignment[current.Index, day, block]
+                                                + variables.Assignment[next.Index, day, block + 1]
+                                                - 1);
 
-                                transitionPenalties.Add(new RoomChangePenalty(
+                                penalties.Add(new RoomChangePenalty(
                                     penaltyVar,
                                     teacherId,
                                     _config.Days[day],
@@ -178,59 +305,171 @@ namespace SchedulePlanner.Core
                 }
             }
 
-            var objVars = transitionPenalties.Select(p => p.Var).ToArray();
-            var objCoeffs = Enumerable.Repeat(roomChangePenalty, objVars.Length).ToArray();
-            model.Minimize(LinearExpr.WeightedSum(objVars.Cast<LinearExpr>(), objCoeffs));
+            var penaltyVars = penalties.Select(x => x.Var).ToArray();
+            var penaltyWeights = Enumerable.Repeat(roomChangePenaltyWeight, penaltyVars.Length).ToArray();
 
-            var solver = new CpSolver();
-            solver.StringParameters = $"max_time_in_seconds:{solverTimeLimitSeconds}";
-            var status = solver.Solve(model);
+            context.Model.Minimize(
+                LinearExpr.WeightedSum(penaltyVars.Cast<LinearExpr>(), penaltyWeights));
 
-            if (status is CpSolverStatus.Optimal or CpSolverStatus.Feasible)
-            {
-                LogSolution(solver, assignment, classAssignments, teacherGroups, transitionPenalties);
-            }
-            else
-            {
-                _logger.LogWarning("Solver finished with status {Status}; no timetable was produced.", status);
-            }
-
-            _logger.LogInformation("Solver statistics: {Stats}", solver.ResponseStats());
-
-            return Task.CompletedTask;
+            return penalties;
         }
 
-        private void LogSolution(
-            CpSolver solver,
-            BoolVar[,,] assignment,
-            IReadOnlyList<ClassAssignment> classes,
-            IReadOnlyDictionary<string, TeacherGroup> teacherGroups,
-            IReadOnlyList<RoomChangePenalty> penalties)
+        private static CpSolver CreateSolver(double solverTimeLimitSeconds)
         {
-            _logger.LogInformation("Timetable objective value (room-change penalties): {Objective}",
-                solver.ObjectiveValue);
-
-            foreach (var teacherEntry in teacherGroups)
+            return new CpSolver
             {
-                var teacher = teacherEntry.Value.Teacher;
-                _logger.LogInformation("Schedule for {Teacher} (ID {TeacherId}):", teacher.FullName, teacher.Id);
+                StringParameters = $"max_time_in_seconds:{solverTimeLimitSeconds}"
+            };
+        }
 
-                for (var day = 0; day < _config.Days.Count; ++day)
+        private ScheduleResult BuildResult(
+            SchedulingContext context,
+            ScheduleVariables variables,
+            IReadOnlyList<RoomChangePenalty> penalties,
+            CpSolver solver,
+            CpSolverStatus status)
+        {
+            var hasSolution = status is CpSolverStatus.Optimal or CpSolverStatus.Feasible;
+
+            var teacherSchedules = new List<TeacherScheduleResult>();
+            var classSummaries = new List<ClassScheduleSummary>();
+            var roomChanges = new List<RoomChangeResult>();
+
+            if (hasSolution)
+            {
+                foreach (var teacherEntry in context.TeacherGroups.Values)
+                {
+                    var days = new List<DayScheduleResult>();
+
+                    for (var day = 0; day < context.NumDays; ++day)
+                    {
+                        var blocks = new List<BlockScheduleResult>();
+
+                        for (var block = 0; block < context.BlocksPerDay; ++block)
+                        {
+                            var assigned = teacherEntry.Classes.FirstOrDefault(entry =>
+                                solver.BooleanValue(variables.Assignment[entry.Index, day, block]));
+
+                            blocks.Add(assigned is not null
+                                ? new BlockScheduleResult(
+                                    block,
+                                    false,
+                                    assigned.Config.Key,
+                                    assigned.Config.Name,
+                                    assigned.Room,
+                                    assigned.Config.Department)
+                                : new BlockScheduleResult(
+                                    block,
+                                    true,
+                                    null,
+                                    null,
+                                    null,
+                                    null));
+                        }
+
+                        days.Add(new DayScheduleResult(_config.Days[day], blocks));
+                    }
+
+                    teacherSchedules.Add(new TeacherScheduleResult(
+                        teacherEntry.Teacher.Id,
+                        teacherEntry.Teacher.FullName,
+                        days));
+                }
+
+                foreach (var entry in context.ClassAssignments)
+                {
+                    var scheduledBlocks = 0;
+
+                    for (var day = 0; day < context.NumDays; ++day)
+                    {
+                        for (var block = 0; block < context.BlocksPerDay; ++block)
+                        {
+                            if (solver.BooleanValue(variables.Assignment[entry.Index, day, block]))
+                            {
+                                scheduledBlocks++;
+                            }
+                        }
+                    }
+
+                    classSummaries.Add(new ClassScheduleSummary(
+                        entry.Config.Key,
+                        entry.Config.Name,
+                        entry.Config.Department,
+                        entry.Teacher.Id,
+                        entry.Teacher.FullName,
+                        entry.Room,
+                        scheduledBlocks,
+                        entry.Config.WeeklyBlocks));
+                }
+
+                foreach (var penalty in penalties)
+                {
+                    if (!solver.BooleanValue(penalty.Var))
+                    {
+                        continue;
+                    }
+
+                    var teacherName = context.TeacherGroups.TryGetValue(penalty.TeacherId, out var teacherGroup)
+                        ? teacherGroup.Teacher.FullName
+                        : penalty.TeacherId;
+
+                    roomChanges.Add(new RoomChangeResult(
+                        penalty.TeacherId,
+                        teacherName,
+                        penalty.Day,
+                        penalty.Block,
+                        penalty.Block + 1,
+                        penalty.FromClassKey,
+                        penalty.FromRoom,
+                        penalty.ToClassKey,
+                        penalty.ToRoom));
+                }
+            }
+
+            return new ScheduleResult(
+                status.ToString(),
+                hasSolution,
+                hasSolution ? solver.ObjectiveValue : null,
+                solver.ResponseStats(),
+                teacherSchedules,
+                classSummaries,
+                roomChanges);
+        }
+
+        private void LogResult(ScheduleResult result)
+        {
+            if (!result.HasSolution)
+            {
+                _logger.LogWarning(
+                    "Solver finished with status {Status}; no timetable was produced.",
+                    result.Status);
+
+                _logger.LogInformation("Solver statistics: {Stats}", result.SolverStatistics);
+                return;
+            }
+
+            _logger.LogInformation(
+                "Timetable objective value (room-change penalties): {Objective}",
+                result.ObjectiveValue);
+
+            foreach (var teacher in result.TeacherSchedules)
+            {
+                _logger.LogInformation("Schedule for {Teacher} (ID {TeacherId}):", teacher.TeacherName, teacher.TeacherId);
+
+                foreach (var day in teacher.Days)
                 {
                     var builder = new StringBuilder();
-                    builder.Append($"{_config.Days[day],-9}: ");
-                    for (var block = 0; block < _config.BlocksPerDay; ++block)
-                    {
-                        var assigned = teacherEntry.Value.Classes.FirstOrDefault(entry =>
-                            solver.BooleanValue(assignment[entry.Index, day, block]));
+                    builder.Append($"{day.Day,-9}: ");
 
-                        if (assigned is not null)
+                    foreach (var block in day.Blocks)
+                    {
+                        if (block.IsFree)
                         {
-                            builder.Append($"{assigned.Config.Key}({assigned.Room}) ");
+                            builder.Append("Free ");
                         }
                         else
                         {
-                            builder.Append("Free ");
+                            builder.Append($"{block.ClassKey}({block.Room}) ");
                         }
                     }
 
@@ -238,51 +477,36 @@ namespace SchedulePlanner.Core
                 }
             }
 
-            foreach (var entry in classes)
+            foreach (var classSummary in result.Classes)
             {
-                var count = 0;
-                for (var day = 0; day < _config.Days.Count; ++day)
-                {
-                    for (var block = 0; block < _config.BlocksPerDay; ++block)
-                    {
-                        if (solver.BooleanValue(assignment[entry.Index, day, block]))
-                        {
-                            ++count;
-                        }
-                    }
-                }
-
-                _logger.LogInformation("Class {ClassId} scheduled for {Count}/{Required} blocks.",
-                    entry.Config.Key, count, entry.Config.WeeklyBlocks);
+                _logger.LogInformation(
+                    "Class {ClassId} scheduled for {Count}/{Required} blocks.",
+                    classSummary.ClassKey,
+                    classSummary.ScheduledBlocks,
+                    classSummary.RequiredBlocks);
             }
 
-            foreach (var penalty in penalties)
+            foreach (var roomChange in result.RoomChanges)
             {
-                if (!solver.BooleanValue(penalty.Var))
-                {
-                    continue;
-                }
-
-                var teacherName = teacherGroups.TryGetValue(penalty.TeacherId, out var teacherGroup)
-                    ? teacherGroup.Teacher.FullName
-                    : penalty.TeacherId;
-
                 _logger.LogInformation(
                     "Penalty: {Teacher} changes from {FromRoom} ({FromClass}) to {ToRoom} ({ToClass}) on {Day} block {Block} -> {NextBlock}.",
-                    teacherName,
-                    penalty.FromRoom,
-                    penalty.FromClassKey,
-                    penalty.ToRoom,
-                    penalty.ToClassKey,
-                    penalty.Day,
-                    penalty.Block,
-                    penalty.Block + 1);
+                    roomChange.TeacherName,
+                    roomChange.FromRoom,
+                    roomChange.FromClassKey,
+                    roomChange.ToRoom,
+                    roomChange.ToClassKey,
+                    roomChange.Day,
+                    roomChange.FromBlock,
+                    roomChange.ToBlock);
             }
+
+            _logger.LogInformation("Solver statistics: {Stats}", result.SolverStatistics);
         }
 
         private IReadOnlyList<ClassAssignment> BuildClassAssignments()
         {
             var comparer = StringComparer.OrdinalIgnoreCase;
+
             var teachersById = _config.Teachers
                 .ToDictionary(t => t.Id, t => t, comparer);
 
@@ -334,13 +558,35 @@ namespace SchedulePlanner.Core
                 var room = ResolveRoom(cls, teacher);
                 if (string.IsNullOrWhiteSpace(room))
                 {
-                    throw new InvalidOperationException($"Unable to determine a room for class {cls.Key} taught by {teacher.FullName}.");
+                    throw new InvalidOperationException(
+                        $"Unable to determine a room for class {cls.Key} taught by {teacher.FullName}.");
                 }
 
                 results.Add(new ClassAssignment(cls, teacher, index, room));
             }
 
             return results;
+        }
+
+        private IReadOnlyDictionary<string, TeacherGroup> BuildTeacherGroups(IReadOnlyList<ClassAssignment> classAssignments)
+        {
+            return classAssignments
+                .GroupBy(entry => entry.Teacher.Id, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(
+                    g => g.Key,
+                    g => new TeacherGroup(g.First().Teacher, g.ToList()),
+                    StringComparer.OrdinalIgnoreCase);
+        }
+
+        private IReadOnlyDictionary<string, IReadOnlyList<ClassAssignment>> BuildRoomGroups(
+            IReadOnlyList<ClassAssignment> classAssignments)
+        {
+            return classAssignments
+                .GroupBy(entry => entry.Room, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(
+                    g => g.Key,
+                    g => (IReadOnlyList<ClassAssignment>)g.ToList(),
+                    StringComparer.OrdinalIgnoreCase);
         }
 
         private static string ResolveRoom(Class cls, Teacher teacher)
@@ -358,55 +604,67 @@ namespace SchedulePlanner.Core
             return string.Empty;
         }
 
-        private double ValidateConfig()
-        {
-            if (_config.Days == null || !_config.Days.Any())
-            {
-                throw new InvalidOperationException("You must specify at least one day in the Scheduler configuration.");
-            }
+        private sealed record NormalizedSettings(double SolverTimeLimitSeconds, int RoomChangePenalty);
 
-            if (_config.BlocksPerDay <= 0)
-            {
-                throw new InvalidOperationException("BlocksPerDay must be greater than zero.");
-            }
+        private sealed record SchedulingContext(
+            CpModel Model,
+            IReadOnlyList<ClassAssignment> ClassAssignments,
+            IReadOnlyDictionary<string, TeacherGroup> TeacherGroups,
+            IReadOnlyDictionary<string, IReadOnlyList<ClassAssignment>> RoomGroups,
+            int NumDays,
+            int BlocksPerDay);
 
-            if (_config.Classes == null || !_config.Classes.Any())
-            {
-                throw new InvalidOperationException("At least one class must be defined.");
-            }
-
-            if (_config.Teachers == null || !_config.Teachers.Any())
-            {
-                throw new InvalidOperationException("At least one teacher must be defined.");
-            }
-
-            if (_config.TeacherDepartments == null || !_config.TeacherDepartments.Any())
-            {
-                throw new InvalidOperationException("At least one department assignment is required.");
-            }
-
-            var solverTimeLimit = _config.SolverTimeLimitSeconds > 0
-                ? _config.SolverTimeLimitSeconds
-                : 10.0;
-
-            if (_config.SolverTimeLimitSeconds <= 0)
-            {
-                _logger.LogWarning(
-                    "SolverTimeLimitSeconds must be greater than zero; falling back to {DefaultTime} seconds.",
-                    solverTimeLimit);
-            }
-
-            if (_config.RoomChangePenalty < 0)
-            {
-                _logger.LogWarning(
-                    "RoomChangePenalty must be non-negative; falling back to zero.");
-            }
-
-            return solverTimeLimit;
-        }
+        private sealed record ScheduleVariables(BoolVar[,,] Assignment);
 
         private sealed record ClassAssignment(Class Config, Teacher Teacher, int Index, string Room);
 
         private sealed record TeacherGroup(Teacher Teacher, IReadOnlyList<ClassAssignment> Classes);
     }
+
+    public sealed record ScheduleResult(
+        string Status,
+        bool HasSolution,
+        double? ObjectiveValue,
+        string SolverStatistics,
+        IReadOnlyList<TeacherScheduleResult> TeacherSchedules,
+        IReadOnlyList<ClassScheduleSummary> Classes,
+        IReadOnlyList<RoomChangeResult> RoomChanges);
+
+    public sealed record TeacherScheduleResult(
+        string TeacherId,
+        string TeacherName,
+        IReadOnlyList<DayScheduleResult> Days);
+
+    public sealed record DayScheduleResult(
+        DayOfWeek Day,
+        IReadOnlyList<BlockScheduleResult> Blocks);
+
+    public sealed record BlockScheduleResult(
+        int Block,
+        bool IsFree,
+        string? ClassKey,
+        string? ClassName,
+        string? Room,
+        string? Department);
+
+    public sealed record ClassScheduleSummary(
+        string ClassKey,
+        string ClassName,
+        string Department,
+        string TeacherId,
+        string TeacherName,
+        string Room,
+        int ScheduledBlocks,
+        int RequiredBlocks);
+
+    public sealed record RoomChangeResult(
+        string TeacherId,
+        string TeacherName,
+        DayOfWeek Day,
+        int FromBlock,
+        int ToBlock,
+        string FromClassKey,
+        string FromRoom,
+        string ToClassKey,
+        string ToRoom);
 }

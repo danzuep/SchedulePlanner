@@ -19,14 +19,21 @@ namespace SchedulePlanner.ImportExport.Excel
         public async Task RunAsync(CancellationToken cancellationToken = default)
         {
             var importExportConfig = ImportExportOptions.Default;
-            await ExportAsync(_config, importExportConfig.FilePath).ConfigureAwait(false);
+            _ = await ExportAsync(_config, importExportConfig.FilePath).ConfigureAwait(false);
         }
 
-        public Task ExportAsync(SchedulerOptions config, string filePath)
+        public Task<string> ExportAsync(SchedulerOptions config, string filePath, bool addTimestamp = false)
         {
-            var fullPath = ExcelSchedulerConfigWriter.WriteWorkbook(config, filePath);
+            var fullPath = config.WriteWorkbook(filePath, addTimestamp);
             _logger.LogInformation("Excel template written to {FilePath}", fullPath);
-            return Task.CompletedTask;
+            return Task.FromResult(fullPath);
+        }
+
+        public Task<string> ExportAsync(ScheduleResult scheduleResult, string filePath, bool addTimestamp = false)
+        {
+            var fullPath = scheduleResult.WriteWorkbook(filePath, addTimestamp);
+            _logger.LogInformation("Excel template written to {FilePath}", fullPath);
+            return Task.FromResult(fullPath);
         }
     }
 }

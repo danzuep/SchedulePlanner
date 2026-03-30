@@ -23,22 +23,22 @@ namespace SchedulePlanner.Worker
 
         public static void Initialise(HostBuilderContext context, IServiceCollection services)
         {
-            services.AddSingleton<IService, ImportService>();
+            services.AddSingleton<IService<ScheduleResult>, ImportService>();
             services.AddHostedService<Worker>();
         }
 
         public sealed class Worker : BackgroundService
         {
-            private readonly IService _processExecutionService;
+            private readonly IService<ScheduleResult> _processExecutionService;
 
-            public Worker(IService processExecutionService)
+            public Worker(IService<ScheduleResult> processExecutionService)
             {
                 _processExecutionService = processExecutionService;
             }
 
             protected override async Task ExecuteAsync(CancellationToken cancellationToken)
             {
-                await _processExecutionService.RunAsync(cancellationToken).ConfigureAwait(false);
+                _ = await _processExecutionService.RunAsync(cancellationToken).ConfigureAwait(false);
             }
         }
     }

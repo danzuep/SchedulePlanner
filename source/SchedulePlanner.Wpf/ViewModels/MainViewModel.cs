@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SchedulePlanner.Core;
 using SchedulePlanner.ImportExport.Excel;
+using SchedulePlanner.Wpf.Helpers;
 using SchedulePlanner.Wpf.Services;
 
 namespace SchedulePlanner.Wpf.ViewModels;
@@ -33,6 +34,7 @@ public partial class MainViewModel : ObservableObject
     private string? outputWorkbookPath;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsButtonEnabled))]
     private bool isBusy;
 
     public bool IsButtonEnabled => !IsBusy;
@@ -89,6 +91,8 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand(AllowConcurrentExecutions = false)]
     private async Task ProcessWorkbookAsync()
     {
+        if (string.IsNullOrWhiteSpace(InputWorkbookPath))
+            InputWorkbookPath = Path.GetFullPath(ImportExportOptions.Default.FilePath);
         try
         {
             IsBusy = true;
@@ -101,18 +105,24 @@ public partial class MainViewModel : ObservableObject
 
             using var scope = _serviceScopeFactory.CreateScope();
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<ExcelSchedulerConfigReader>>();
-            //var schedulingLogger = scope.ServiceProvider.GetRequiredService<ILogger<SchedulingService>>();
-            var schedulingLogger = new FileLogger(options);
+            var inner = scope.ServiceProvider.GetRequiredService<ILogger<SchedulingService>>();
+            await using var schedulingLogger = new FileLogger<SchedulingService>(options, inner);
             var reader = new ExcelSchedulerConfigReader(options, logger);
             var importService = new ImportService(reader, schedulingLogger);
-            await importService.RunAsync();
+            var result = await importService.RunAsync();
 
             StatusMessage = "Processing completed successfully.";
 
-            var log = schedulingLogger.ReadLog();
+            var service = scope.ServiceProvider.GetRequiredService<ExportService>();
+            var filePath = await service.ExportAsync(result, options.FilePath, addTimestamp: true);
+
+            StatusMessage = "Result written successfully.";
+
+            //var log = await schedulingLogger.ReadAllTextAsync();
 
             _dialogService.ShowMessage("Success", "Schedule planned successfully." +
-                Environment.NewLine + Environment.NewLine + log);
+                Environment.NewLine + Environment.NewLine +
+                "Template written to " + filePath);
         }
         catch (Exception ex)
         {

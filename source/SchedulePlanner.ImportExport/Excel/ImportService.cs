@@ -3,7 +3,7 @@ using SchedulePlanner.Core;
 
 namespace SchedulePlanner.ImportExport.Excel
 {
-    public sealed class ImportService : IService
+    public sealed class ImportService : IService<ScheduleResult>
     {
         private readonly IExcelSchedulerConfigReader _builder;
         private readonly ILogger<SchedulingService>? _logger;
@@ -14,11 +14,11 @@ namespace SchedulePlanner.ImportExport.Excel
             _logger = logger;
         }
 
-        public async Task RunAsync(CancellationToken cancellationToken = default)
+        public async Task<ScheduleResult> RunAsync(CancellationToken cancellationToken = default)
         {
             var schedulerConfig = await _builder.BuildAsync(cancellationToken).ConfigureAwait(false);
             var schedulingService = new SchedulingService(schedulerConfig, _logger);
-            await schedulingService.RunAsync(cancellationToken).ConfigureAwait(false);
+            return await schedulingService.RunAsync(cancellationToken).ConfigureAwait(false);
         }
     }
 }
