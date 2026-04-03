@@ -1,6 +1,6 @@
 # Schedule Planner
 
-[![Download SchedulePlanner](https://gist.github.com/cxmeel/0dbc95191f239b631c3874f4ccf114e2/raw/download-compact.svg)](https://github.com/danzuep/SchedulePlanner/releases/latest)
+[Download SchedulePlanner](https://danzuep.github.io/SchedulePlanner/download/)
 
 ## The Challenge of Classroom Scheduling
 
@@ -30,19 +30,12 @@ SchedulePlanner is a modern, intelligent classroom scheduling solution designed 
 - Real-time validation ensures no double-bookings
 - Instant alerts when conflicts are detected
 
-#### 📊 Visual Schedule Builder
-- Intuitive drag-and-drop interface
-- Color-coded visualization for easy understanding
-- Multiple view options (daily, weekly, monthly)
-
 #### 👨‍🏫 Teacher Management
 - Track teacher availability and preferences
-- Manage substitute teacher assignments
 - Balance teaching loads across departments
 
 #### 🏫 Room Optimization
 - Match classes to appropriate room capacities
-- Track specialized equipment and facilities
 - Optimize room utilization across the schedule
 
 #### 📚 Course & Class Management
@@ -52,8 +45,6 @@ SchedulePlanner is a modern, intelligent classroom scheduling solution designed 
 
 #### 🔄 Flexible Adjustments
 - Easy schedule modifications and updates
-- Version history for tracking changes
-- Export schedules in multiple formats
 
 ### How It Works
 
@@ -61,7 +52,7 @@ SchedulePlanner is a modern, intelligent classroom scheduling solution designed 
 2. **Set Constraints**: Define availability, capacity, and scheduling rules
 3. **Generate Schedule**: Let the algorithm create an optimized timetable
 4. **Review & Adjust**: Visualize the schedule and make manual adjustments as needed
-5. **Export & Share**: Generate printable schedules and share with stakeholders
+5. **Export & Share**: Generate printable schedules and share with others
 
 ### Benefits for Schools
 
@@ -79,21 +70,28 @@ SchedulePlanner is a modern, intelligent classroom scheduling solution designed 
 - **Tutoring Services**: Managing multiple tutors and students
 - **Music & Art Schools**: Scheduling lessons and practice rooms
 
-## System Requirements
-
-- Windows 10 or later
-- .NET 8.0 Runtime
-- 4 GB RAM minimum
-- 500 MB available disk space
-
 ## Get Started Today
 
 Ready to transform your school's scheduling process? Download SchedulePlanner now and experience the difference intelligent scheduling can make.
 
-[![Download SchedulePlanner](https://gist.github.com/cxmeel/0dbc95191f239b631c3874f4ccf114e2/raw/download-compact.svg)](https://github.com/danzuep/SchedulePlanner/releases/latest)
+## Download
+
+App Demo:  
+![Excel](https://raw.githubusercontent.com/danzuep/SchedulePlanner/main/resources/SchedulePlanner-Excel.gif)
+
+[Download SchedulePlanner](https://github.com/danzuep/SchedulePlanner/releases/latest)
+
+After downloading, right click, select Properties, then Unblock.  
+![Unblock](https://raw.githubusercontent.com/danzuep/SchedulePlanner/main/resources/SchedulePlanner-Unblock.gif)
+
+### Note for Users Without Excel
+
+The software relies on Microsoft Excel, so if you don't have that installed, you can use [LibreOffice](https://www.libreoffice.org/download/download-libreoffice/) as a free alternative to open and edit spreadsheet files.
 
 ---
 
-*The website was built with Hugo, using the excellent PaperMod theme found here: https://github.com/adityatelange/hugo-PaperMod*
+*Animations created with [ScreenToGif](https://www.screentogif.com/).*
+
+*The website was built with Hugo, using the excellent [PaperMod](https://github.com/adityatelange/hugo-PaperMod) theme*
 
 *SchedulePlanner is open-source software released under the MIT License. Contributions and feedback are welcome!*
