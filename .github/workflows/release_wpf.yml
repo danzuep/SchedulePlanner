@@ -1,0 +1,52 @@
+name: 🪟 Publish WPF package
+run-name: Publish WPF package
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - devops
+
+# Cancel any other running workflows with the same ID
+concurrency:
+  group: cd-release-${{ github.ref }}
+  cancel-in-progress: true
+
+# https://docs.github.com/en/actions/using-workflows/reusing-workflows
+jobs:
+  metadata:
+    name: 🏷️ Metadata
+    if: ${{ github.event_name != 'pull_request' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+      - name: Validate release metadata
+        run: echo "Add any release metadata validation here if needed."
+
+  version:
+    name: 🧬 Version
+    uses: ./.github/workflows/_version.yml
+    with:
+      project_search: "SchedulePlanner.Wpf"
+
+  build:
+    name: 🏗️ Build
+    needs: [ version ]
+    uses: ./.github/workflows/_build.yml
+    with:
+      projectFile: ${{ needs.version.outputs.projectFile }}
+      version: ${{ needs.version.outputs.semVer }}
+
+  deploy:
+    name: 📦 Deploy
+    if: ${{ github.event_name != 'pull_request' }}
+    needs: [ version, build ]
+    permissions:
+      contents: write
+    uses: ./.github/workflows/_deploy.yml
+    with:
+      version: ${{ needs.version.outputs.semVer }}
+      zipName: ${{ needs.build.outputs.zipName }}
+    secrets: inherit

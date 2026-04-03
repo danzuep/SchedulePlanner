@@ -1,0 +1,77 @@
+name: 📦 Deploy package
+run-name: Deploy package
+
+on:
+  workflow_call:
+    inputs:
+      zipName:
+        description: 'The ZIP file name'
+        required: true
+        type: string
+      version:
+        description: 'Package version'
+        required: true
+        type: string
+      environment:
+        description: 'The publish environment'
+        default: release
+        type: string
+      changelogFile:
+        description: 'The changelog file name'
+        default: 'CHANGELOG_RELEASE.md'
+        type: string
+
+env:
+  TagName: ${{ format('v{0}', inputs.version) }}
+        
+jobs:
+  release:
+    name: GitHub Release
+    runs-on: windows-latest
+    environment: ${{ inputs.environment || 'release' }}
+    steps:
+      - name: Checkout the source repository from Git
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.zipName }}
+
+      - name: Create changelog for release
+        shell: pwsh
+        run: |
+          $lastTag = git describe --tags --abbrev=0 2>$null
+          if ([string]::IsNullOrWhiteSpace($lastTag)) {
+            git log --pretty=format:"- %s (%h)" HEAD | Out-File -FilePath ${{ inputs.changelogFile }} -Encoding utf8
+          } else {
+            git log --pretty=format:"- %s (%h)" "$lastTag..HEAD" | Out-File -FilePath ${{ inputs.changelogFile }} -Encoding utf8
+          }
+
+      - name: Create and push git tag
+        shell: pwsh
+        run: |
+          $tag = "${{ env.TagName }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag $tag
+          git push origin $tag
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TagName }}
+          name: Release ${{ inputs.version }}
+          body_path: ${{ inputs.changelogFile }}
+          files: |
+            ${{ inputs.zipName }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Markdown workflow job summary
+        shell: pwsh
+        run: |
+          $repositoryName = Split-Path '${{ github.repository }}' -Leaf
+          Add-Content $env:GITHUB_STEP_SUMMARY "### $repositoryName ${{ inputs.version }} WPF release published"

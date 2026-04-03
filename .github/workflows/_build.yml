@@ -1,0 +1,97 @@
+name: 🏗️ Build WPF package
+run-name: Build WPF package
+
+on:
+  workflow_call:
+    inputs:
+      projectFile:
+        description: 'The project file path'
+        required: true
+        type: string
+      version:
+        description: 'Package version'
+        required: true
+        type: string
+      environment:
+        description: 'The publish environment'
+        default: release
+        type: string
+    outputs:
+      zipName:
+        description: 'The ZIP file name'
+        value: ${{ jobs.build.outputs.zipName }}
+
+env:
+  DotNetVersion: '10.x'
+  DotNetTarget: 'net10.0-windows'
+  PublishDir: 'publish'
+
+jobs:
+  build:
+    name: Build WPF
+    runs-on: windows-latest
+    environment: ${{ inputs.environment || 'release' }}
+    outputs:
+      zipName: ${{ steps.zip.outputs.zipName }}
+      zipPath: ${{ steps.zip.outputs.zipPath }}
+    steps:
+      - name: Checkout the source repository from Git
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Get .NET ${{ env.DotNetVersion }} externals
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DotNetVersion }}
+          dotnet-quality: 'preview'
+
+      - name: Get any cached NuGet packages from the last run
+        uses: actions/cache@v5
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
+          restore-keys: ${{ runner.os }}-nuget-
+
+      - name: Restore and publish WPF self-contained single-file exe
+        shell: pwsh
+        run: |
+          $projectFile = "${{ inputs.projectFile }}"
+          $buildVersion = "${{ inputs.version }}"
+          $targetFramework = "${{ env.DotNetTarget }}"
+          $publishDir = "${{ env.PublishDir }}"
+
+          dotnet publish $projectFile `
+            -c Release `
+            -f $targetFramework `
+            -r win-x64 `
+            -p:Version=$buildVersion `
+            -p:SelfContained=true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:EnableCompressionInSingleFile=true `
+            -p:DebugType=None `
+            -p:DebugSymbols=false `
+            --output $publishDir `
+            --nologo
+
+      - name: Create ZIP archive
+        id: zip
+        shell: pwsh
+        run: |
+          $repositoryName = $(basename '${{ github.repository }}')
+          $zipName = "${repositoryName}-${{ inputs.version }}.zip"
+          echo "Zip file name: $zipName"
+          echo "zipName=${zipName}" >> $env:GITHUB_OUTPUT
+          $publishDir = "${{ env.PublishDir }}"
+          $zipPath = "$publishDir\$zipName"
+          echo "Zip file path: $zipPath"
+          echo "zipPath=${zipPath}" >> $env:GITHUB_OUTPUT
+          if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
+          Compress-Archive -Path "$publishDir\*" -DestinationPath $zipPath
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.zip.outputs.zipName }}
+          path: ${{ steps.zip.outputs.zipPath }}
