@@ -97,14 +97,14 @@ namespace SchedulePlanner.Core
 
         private static string ResolveRoom(Class cls, Teacher teacher)
         {
-            if (!string.IsNullOrWhiteSpace(teacher.PreferredRoom))
-            {
-                return teacher.PreferredRoom;
-            }
-
             if (!string.IsNullOrWhiteSpace(cls.PreferredRoom))
             {
                 return cls.PreferredRoom;
+            }
+
+            if (!string.IsNullOrWhiteSpace(teacher.PreferredRoom))
+            {
+                return teacher.PreferredRoom;
             }
 
             return string.Empty;

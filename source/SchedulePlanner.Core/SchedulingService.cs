@@ -63,13 +63,22 @@ namespace SchedulePlanner.Core
             _constraintBuilder.AddSchedulingRules(context, variables, _config, cancellationToken);
             var penalties = _optimizationBuilder.AddRoomChangeOptimization(context, variables, _config, normalized.RoomChangePenalty, cancellationToken);
             var spreadPenalties = _optimizationBuilder.AddScheduleSpreadOptimization(context, variables, _config, normalized.ScheduleSpreadPenalty, cancellationToken);
+            var weekDistPenalties = _optimizationBuilder.AddWeekDistributionOptimization(context, variables, _config, normalized.WeekDistributionPenalty, cancellationToken);
+            var classDayClusteringPenalties = _optimizationBuilder.AddClassDayClusteringOptimization(context, variables, _config, normalized.ClassDayClusteringPenalty, cancellationToken);
+            var classBlockConsistencyPenalties = _optimizationBuilder.AddClassBlockConsistencyOptimization(context, variables, _config, normalized.ClassBlockConsistencyPenalty, cancellationToken);
 
-            // Combine both penalties for minimization
+            // Combine all penalties for minimization
             var allPenaltyVars = penalties.Select(x => x.Var)
                 .Concat(spreadPenalties.Select(x => x.Var))
+                .Concat(weekDistPenalties.Select(x => x.Var))
+                .Concat(classDayClusteringPenalties.Select(x => x.Var))
+                .Concat(classBlockConsistencyPenalties.Select(x => x.Var))
                 .ToArray();
             var allPenaltyWeights = Enumerable.Repeat(normalized.RoomChangePenalty, penalties.Count)
                 .Concat(Enumerable.Repeat(normalized.ScheduleSpreadPenalty, spreadPenalties.Count))
+                .Concat(Enumerable.Repeat(normalized.WeekDistributionPenalty, weekDistPenalties.Count))
+                .Concat(Enumerable.Repeat(normalized.ClassDayClusteringPenalty, classDayClusteringPenalties.Count))
+                .Concat(Enumerable.Repeat(normalized.ClassBlockConsistencyPenalty, classBlockConsistencyPenalties.Count))
                 .ToArray();
 
             context.Model.Minimize(

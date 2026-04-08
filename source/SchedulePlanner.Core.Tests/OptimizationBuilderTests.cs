@@ -236,5 +236,179 @@ namespace SchedulePlanner.Core.Tests
             // Only one class, so no penalties should be generated
             await Assert.That(penalties.Count).IsEqualTo(0);
         }
+
+        [Test]
+        public async Task AddWeekDistributionOptimization_ValidContext_ReturnsPenalties()
+        {
+            var config = new SchedulerOptions
+            {
+                Days = new[] { DayOfWeek.Monday, DayOfWeek.Tuesday },
+                BlocksPerDay = 3,
+                Classes = new List<Class>
+                {
+                    new Class { Key = "Math101", Department = "Math", WeeklyBlocks = 2 },
+                    new Class { Key = "Math102", Department = "Math", WeeklyBlocks = 2 }
+                },
+                Teachers = new List<Teacher>
+                {
+                    new Teacher { Id = "T1", FullName = "Teacher 1" }
+                },
+                TeacherDepartments = new List<TeacherDepartment>
+                {
+                    new TeacherDepartment { TeacherId = "T1", Department = "Math" }
+                }
+            };
+
+            var classAssignmentBuilder = new ClassAssignmentBuilder();
+            var classAssignments = classAssignmentBuilder.BuildClassAssignments(config);
+            var teacherGroups = classAssignmentBuilder.BuildTeacherGroups(classAssignments);
+            var roomGroups = classAssignmentBuilder.BuildRoomGroups(classAssignments);
+
+            var context = new SchedulingContext(
+                new CpModel(),
+                classAssignments,
+                teacherGroups,
+                roomGroups,
+                config.Days.Count,
+                config.BlocksPerDay);
+
+            var assignment = new BoolVar[classAssignments.Count, config.Days.Count, config.BlocksPerDay];
+            for (var cls = 0; cls < classAssignments.Count; ++cls)
+            {
+                for (var day = 0; day < config.Days.Count; ++day)
+                {
+                    for (var block = 0; block < config.BlocksPerDay; ++block)
+                    {
+                        assignment[cls, day, block] = context.Model.NewBoolVar(
+                            $"assign_{classAssignments[cls].Config.Key}_day{day}_block{block}");
+                    }
+                }
+            }
+
+            var variables = new ScheduleVariables(assignment);
+            var optimizationBuilder = new OptimizationBuilder();
+
+            var penalties = optimizationBuilder.AddWeekDistributionOptimization(
+                context, variables, config, 1, CancellationToken.None);
+
+            await Assert.That(penalties).IsNotNull();
+            await Assert.That(penalties.Count).IsGreaterThan(0);
+        }
+
+        [Test]
+        public async Task AddClassDayClusteringOptimization_ValidContext_ReturnsPenalties()
+        {
+            var config = new SchedulerOptions
+            {
+                Days = new[] { DayOfWeek.Monday, DayOfWeek.Tuesday },
+                BlocksPerDay = 3,
+                Classes = new List<Class>
+                {
+                    new Class { Key = "Math101", Department = "Math", WeeklyBlocks = 2 },
+                    new Class { Key = "Math102", Department = "Math", WeeklyBlocks = 2 }
+                },
+                Teachers = new List<Teacher>
+                {
+                    new Teacher { Id = "T1", FullName = "Teacher 1" }
+                },
+                TeacherDepartments = new List<TeacherDepartment>
+                {
+                    new TeacherDepartment { TeacherId = "T1", Department = "Math" }
+                }
+            };
+
+            var classAssignmentBuilder = new ClassAssignmentBuilder();
+            var classAssignments = classAssignmentBuilder.BuildClassAssignments(config);
+            var teacherGroups = classAssignmentBuilder.BuildTeacherGroups(classAssignments);
+            var roomGroups = classAssignmentBuilder.BuildRoomGroups(classAssignments);
+
+            var context = new SchedulingContext(
+                new CpModel(),
+                classAssignments,
+                teacherGroups,
+                roomGroups,
+                config.Days.Count,
+                config.BlocksPerDay);
+
+            var assignment = new BoolVar[classAssignments.Count, config.Days.Count, config.BlocksPerDay];
+            for (var cls = 0; cls < classAssignments.Count; ++cls)
+            {
+                for (var day = 0; day < config.Days.Count; ++day)
+                {
+                    for (var block = 0; block < config.BlocksPerDay; ++block)
+                    {
+                        assignment[cls, day, block] = context.Model.NewBoolVar(
+                            $"assign_{classAssignments[cls].Config.Key}_day{day}_block{block}");
+                    }
+                }
+            }
+
+            var variables = new ScheduleVariables(assignment);
+            var optimizationBuilder = new OptimizationBuilder();
+
+            var penalties = optimizationBuilder.AddClassDayClusteringOptimization(
+                context, variables, config, 1, CancellationToken.None);
+
+            await Assert.That(penalties).IsNotNull();
+            await Assert.That(penalties.Count).IsGreaterThan(0);
+        }
+
+        [Test]
+        public async Task AddClassBlockConsistencyOptimization_ValidContext_ReturnsPenalties()
+        {
+            var config = new SchedulerOptions
+            {
+                Days = new[] { DayOfWeek.Monday, DayOfWeek.Tuesday },
+                BlocksPerDay = 3,
+                Classes = new List<Class>
+                {
+                    new Class { Key = "Math101", Department = "Math", WeeklyBlocks = 2 },
+                    new Class { Key = "Math102", Department = "Math", WeeklyBlocks = 2 }
+                },
+                Teachers = new List<Teacher>
+                {
+                    new Teacher { Id = "T1", FullName = "Teacher 1" }
+                },
+                TeacherDepartments = new List<TeacherDepartment>
+                {
+                    new TeacherDepartment { TeacherId = "T1", Department = "Math" }
+                }
+            };
+
+            var classAssignmentBuilder = new ClassAssignmentBuilder();
+            var classAssignments = classAssignmentBuilder.BuildClassAssignments(config);
+            var teacherGroups = classAssignmentBuilder.BuildTeacherGroups(classAssignments);
+            var roomGroups = classAssignmentBuilder.BuildRoomGroups(classAssignments);
+
+            var context = new SchedulingContext(
+                new CpModel(),
+                classAssignments,
+                teacherGroups,
+                roomGroups,
+                config.Days.Count,
+                config.BlocksPerDay);
+
+            var assignment = new BoolVar[classAssignments.Count, config.Days.Count, config.BlocksPerDay];
+            for (var cls = 0; cls < classAssignments.Count; ++cls)
+            {
+                for (var day = 0; day < config.Days.Count; ++day)
+                {
+                    for (var block = 0; block < config.BlocksPerDay; ++block)
+                    {
+                        assignment[cls, day, block] = context.Model.NewBoolVar(
+                            $"assign_{classAssignments[cls].Config.Key}_day{day}_block{block}");
+                    }
+                }
+            }
+
+            var variables = new ScheduleVariables(assignment);
+            var optimizationBuilder = new OptimizationBuilder();
+
+            var penalties = optimizationBuilder.AddClassBlockConsistencyOptimization(
+                context, variables, config, 1, CancellationToken.None);
+
+            await Assert.That(penalties).IsNotNull();
+            await Assert.That(penalties.Count).IsGreaterThan(0);
+        }
     }
 }

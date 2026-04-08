@@ -69,9 +69,30 @@ namespace SchedulePlanner.Core
                 _logger.LogWarning("ScheduleSpreadPenalty must be non-negative; falling back to zero.");
             }
 
-            return new NormalizedSettings(solverTimeLimitSeconds, roomChangePenalty, scheduleSpreadPenalty);
+            var weekDistributionPenalty = Math.Max(0, config.WeekDistributionPenalty);
+
+            if (config.WeekDistributionPenalty < 0)
+            {
+                _logger.LogWarning("WeekDistributionPenalty must be non-negative; falling back to zero.");
+            }
+
+            var classDayClusteringPenalty = Math.Max(0, config.ClassDayClusteringPenalty);
+
+            if (config.ClassDayClusteringPenalty < 0)
+            {
+                _logger.LogWarning("ClassDayClusteringPenalty must be non-negative; falling back to zero.");
+            }
+
+            var classBlockConsistencyPenalty = Math.Max(0, config.ClassBlockConsistencyPenalty);
+
+            if (config.ClassBlockConsistencyPenalty < 0)
+            {
+                _logger.LogWarning("ClassBlockConsistencyPenalty must be non-negative; falling back to zero.");
+            }
+
+            return new NormalizedSettings(solverTimeLimitSeconds, roomChangePenalty, scheduleSpreadPenalty, weekDistributionPenalty, classDayClusteringPenalty, classBlockConsistencyPenalty);
         }
     }
 
-    public sealed record NormalizedSettings(double SolverTimeLimitSeconds, int RoomChangePenalty, int ScheduleSpreadPenalty);
+    public sealed record NormalizedSettings(double SolverTimeLimitSeconds, int RoomChangePenalty, int ScheduleSpreadPenalty, int WeekDistributionPenalty, int ClassDayClusteringPenalty, int ClassBlockConsistencyPenalty);
 }

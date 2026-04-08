@@ -8,16 +8,16 @@ public sealed record ImportExportOptions : IOptions<ImportExportOptions>
 
     public static readonly string SectionName = "ImportExport";
 
-    public static readonly ImportExportOptions Default = new ImportExportOptions
-    {
-#if DEBUG
-        Directory = "../..",
-#endif
-    };
+    public static readonly ImportExportOptions Default = new ImportExportOptions();
 
     public ImportExportFileType FileType { get; set; } = ImportExportFileType.Xlsx;
 
-    public string Directory { get; set; } = ".";
+    public string Directory { get; set; } =
+#if DEBUG
+        "../..";
+#else
+        ".";
+#endif
 
     public string FileName { get; set; } = "schedule-demo.xlsx";
 

@@ -24,6 +24,9 @@ public sealed record SchedulerOptions : IOptions<SchedulerOptions>
     public int BlocksPerDay { get; set; } = 9;
     public int RoomChangePenalty { get; set; } = 3;
     public int ScheduleSpreadPenalty { get; set; } = 2;
+    public int WeekDistributionPenalty { get; set; } = 1;
+    public int ClassDayClusteringPenalty { get; set; } = 1;
+    public int ClassBlockConsistencyPenalty { get; set; } = 1;
     public double SolverTimeLimitSeconds { get; set; } = 10.0;
     public List<Teacher> Teachers { get; set; } = new();
     public List<Class> Classes { get; set; } = new();
@@ -57,7 +60,7 @@ public sealed record Teacher
     public string FullName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string PreferredRoom { get; set; } = string.Empty;
-    public int TargetLoadBlocks { get; set; } = 10;
+    public int TargetLoadBlocks { get; set; } = 16;
     public override string ToString() => $"{FullName} ({PreferredRoom})";
 }
 
@@ -67,7 +70,7 @@ public sealed record Class
     public string Department { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string PreferredRoom { get; set; } = string.Empty;
-    public int WeeklyBlocks { get; set; } = 1;
+    public int WeeklyBlocks { get; set; } = 4;
 }
 
 public sealed record Department

@@ -17,8 +17,8 @@ public static partial class Program
             .ConfigureServices(Initialise)
             .Build();
 
-        var exportService = host.Services.GetRequiredService<ExportService>();
-        await exportService.RunAsync();
+        var service = host.Services.GetRequiredService<ImportExportService>();
+        await service.RunAsync();
 
         //Console.WriteLine("Press any key to exit...");
         //Console.ReadKey();
@@ -26,6 +26,7 @@ public static partial class Program
 
     public static void Initialise(HostBuilderContext context, IServiceCollection services)
     {
+        services.AddSingleton<ImportExportService>();
         services.AddSingleton<ExportService>();
         services.AddSingleton<ImportService>();
     }
