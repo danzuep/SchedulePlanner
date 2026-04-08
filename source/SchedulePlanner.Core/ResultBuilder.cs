@@ -138,10 +138,33 @@ namespace SchedulePlanner.Core
                 status.ToString(),
                 hasSolution,
                 hasSolution ? solver.ObjectiveValue : null,
-                hasSolution ? solver.ResponseStats() : string.Empty,
+                ParseSolverStatistics(hasSolution ? solver.ResponseStats() : string.Empty),
                 teacherSchedules,
                 classSummaries,
                 roomChanges);
+        }
+
+        private static IReadOnlyList<SummaryItem> ParseSolverStatistics(string stats)
+        {
+            var lines = stats.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            var statistics = new List<SummaryItem>();
+
+            foreach (var line in lines)
+            {
+                var colonIndex = line.IndexOf(':');
+                if (colonIndex > 0)
+                {
+                    var key = line[..colonIndex].Trim();
+                    var value = line[(colonIndex + 1)..].Trim();
+                    statistics.Add(new SummaryItem(key, value));
+                }
+                else if (!string.IsNullOrWhiteSpace(line))
+                {
+                    statistics.Add(new SummaryItem("Info", line.Trim()));
+                }
+            }
+
+            return statistics;
         }
     }
 }

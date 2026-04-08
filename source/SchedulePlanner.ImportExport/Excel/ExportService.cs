@@ -24,14 +24,16 @@ namespace SchedulePlanner.ImportExport.Excel
 
         public Task<string> ExportAsync(SchedulerOptions config, string filePath, bool addTimestamp = false)
         {
-            var fullPath = config.WriteWorkbook(filePath, addTimestamp);
+            var writer = new ExcelSchedulerConfigWriter();
+            var fullPath = writer.WriteSchedulerOptions(config, filePath, addTimestamp);
             _logger.LogInformation("Excel template written to {FilePath}", fullPath);
             return Task.FromResult(fullPath);
         }
 
         public Task<string> ExportAsync(ScheduleResult scheduleResult, string filePath, bool addTimestamp = false)
         {
-            var fullPath = scheduleResult.WriteWorkbook(filePath, addTimestamp);
+            var writer = new ExcelSchedulerConfigWriter();
+            var fullPath = writer.WriteScheduleResult(scheduleResult, filePath, addTimestamp);
             _logger.LogInformation("Excel template written to {FilePath}", fullPath);
             return Task.FromResult(fullPath);
         }

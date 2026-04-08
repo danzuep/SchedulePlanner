@@ -5,10 +5,10 @@ using SchedulePlanner.Core;
 
 namespace SchedulePlanner.ImportExport.Excel;
 
-public static class ExcelSchedulerConfigWriter
+public class ExcelSchedulerConfigWriter
 {
-    public static string WriteWorkbook(
-        this ScheduleResult data,
+    public string WriteScheduleResult(
+        ScheduleResult data,
         string filePath,
         bool addTimestamp = false)
     {
@@ -19,33 +19,20 @@ public static class ExcelSchedulerConfigWriter
 
         using var workbook = new XLWorkbook();
 
+        AddSummaryWorksheet(workbook, data);
+
         foreach (var teacher in data.TeacherSchedules)
         {
             var weekSchedule = teacher.ToWeekSchedule();
-            workbook.AddWorksheet(weekSchedule.Blocks, $"{teacher.TeacherName}");
+            AddWorksheet(workbook, weekSchedule.Blocks, $"{teacher.TeacherName}");
         }
 
-        var fileInfo = new FileInfo(filePath);
-        if (fileInfo.Directory != null && !fileInfo.Directory.Exists)
-        {
-            fileInfo.Directory.Create();
-        }
-
-        var fullPath = fileInfo.FullName;
-        if (addTimestamp || fileInfo.IsFileLocked())
-        {
-            var fileName = new StringBuilder(Path.GetFileNameWithoutExtension(filePath));
-            fileName.Append(DateTime.Now.ToDateTimeName("_"));
-            fileName.Append(Path.GetExtension(filePath));
-            var directory = Path.GetDirectoryName(filePath) ?? string.Empty;
-            fullPath = Path.Combine(directory, fileName.ToString());
-        }
-
+        var fullPath = GetFullPath(filePath, addTimestamp);
         workbook.SaveAs(fullPath);
         return fullPath;
     }
 
-    public static string WriteWorkbook(this SchedulerOptions data, string filePath, bool addTimestamp = false)
+    public string WriteSchedulerOptions(SchedulerOptions data, string filePath, bool addTimestamp = false)
     {
         if (data == null || string.IsNullOrWhiteSpace(filePath))
         {
@@ -54,12 +41,60 @@ public static class ExcelSchedulerConfigWriter
 
         using var workbook = new XLWorkbook();
 
-        workbook.AddSettingsWorksheet(data);
-        workbook.AddWorksheet(data.Teachers, nameof(data.Teachers));
-        workbook.AddWorksheet(data.Classes, nameof(data.Classes));
-        workbook.AddWorksheet(data.Departments, nameof(data.Departments));
-        workbook.AddWorksheet(data.TeacherDepartments, nameof(data.TeacherDepartments));
+        AddSettingsWorksheet(workbook, data);
+        AddWorksheet(workbook, data.Teachers, nameof(data.Teachers));
+        AddWorksheet(workbook, data.Classes, nameof(data.Classes));
+        AddWorksheet(workbook, data.Departments, nameof(data.Departments));
+        AddWorksheet(workbook, data.TeacherDepartments, nameof(data.TeacherDepartments));
 
+        var fullPath = GetFullPath(filePath, addTimestamp);
+        workbook.SaveAs(fullPath);
+        return fullPath;
+    }
+
+    private void AddSummaryWorksheet(XLWorkbook workbook, ScheduleResult data)
+    {
+        var summaryItems = new List<SummaryItem>
+        {
+            new("Status", data.Status),
+            new("HasSolution", data.HasSolution.ToString()),
+            new("ObjectiveValue", data.ObjectiveValue?.ToString() ?? "N/A"),
+            new("TotalClasses", data.Classes.Count.ToString()),
+            new("TotalTeachers", data.TeacherSchedules.Count.ToString()),
+            new("TotalRoomChanges", data.RoomChanges.Count.ToString()),
+            new("ScheduledBlocks", data.Classes.Sum(c => c.ScheduledBlocks).ToString()),
+            new("RequiredBlocks", data.Classes.Sum(c => c.RequiredBlocks).ToString()),
+        };
+
+        summaryItems.AddRange(data.SolverStatistics);
+
+        AddWorksheet(workbook, summaryItems, "Summary");
+    }
+
+    private void AddSettingsWorksheet(XLWorkbook workbook, SchedulerOptions data)
+    {
+        var metadata = new Dictionary<string, XLCellValue>
+        {
+            [nameof(data.BlocksPerDay)] = data.BlocksPerDay,
+            [nameof(data.RoomChangePenalty)] = data.RoomChangePenalty,
+            [nameof(data.ScheduleSpreadPenalty)] = data.ScheduleSpreadPenalty,
+            [nameof(data.WeekDistributionPenalty)] = data.WeekDistributionPenalty,
+            [nameof(data.ClassDayClusteringPenalty)] = data.ClassDayClusteringPenalty,
+            [nameof(data.ClassBlockConsistencyPenalty)] = data.ClassBlockConsistencyPenalty,
+            [nameof(data.SolverTimeLimitSeconds)] = data.SolverTimeLimitSeconds,
+        };
+        AddWorksheet(workbook, metadata, SchedulerOptions.SettingsName);
+    }
+
+    private void AddWorksheet<T>(IXLWorkbook workbook, IEnumerable<T> data, string name)
+    {
+        var ws = workbook.AddWorksheet(name);
+        ws.FirstCell().InsertTable(data, name);
+        ws.Columns().AdjustToContents();
+    }
+
+    private string GetFullPath(string filePath, bool addTimestamp)
+    {
         var fileInfo = new FileInfo(filePath);
         if (fileInfo.Directory != null && !fileInfo.Directory.Exists)
         {
@@ -67,7 +102,7 @@ public static class ExcelSchedulerConfigWriter
         }
 
         var fullPath = fileInfo.FullName;
-        if (addTimestamp || fileInfo.IsFileLocked())
+        if (addTimestamp || IsFileLocked(fileInfo))
         {
             var fileName = new StringBuilder(Path.GetFileNameWithoutExtension(filePath));
             fileName.Append(DateTime.Now.ToDateTimeName("_"));
@@ -76,29 +111,10 @@ public static class ExcelSchedulerConfigWriter
             fullPath = Path.Combine(directory, fileName.ToString());
         }
 
-        workbook.SaveAs(fullPath);
         return fullPath;
     }
 
-    private static void AddSettingsWorksheet(this XLWorkbook workbook, SchedulerOptions data)
-    {
-        var metadata = new Dictionary<string, XLCellValue>
-        {
-            [nameof(data.BlocksPerDay)] = data.BlocksPerDay,
-            [nameof(data.RoomChangePenalty)] = data.RoomChangePenalty,
-            [nameof(data.SolverTimeLimitSeconds)] = data.SolverTimeLimitSeconds,
-        };
-        workbook.AddWorksheet(metadata, SchedulerOptions.SettingsName);
-    }
-
-    public static void AddWorksheet<T>(this IXLWorkbook workbook, IEnumerable<T> data, string name)
-    {
-        var ws = workbook.AddWorksheet(name);
-        ws.FirstCell().InsertTable(data, name);
-        ws.Columns().AdjustToContents();
-    }
-
-    public static bool IsFileLocked(this FileInfo file)
+    private static bool IsFileLocked(FileInfo file)
     {
         try
         {

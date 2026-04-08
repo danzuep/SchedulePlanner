@@ -143,11 +143,13 @@ namespace SchedulePlanner.Core
         }
     }
 
+    public sealed record SummaryItem(string Key, string Value);
+
     public sealed record ScheduleResult(
         string Status,
         bool HasSolution,
         double? ObjectiveValue,
-        string SolverStatistics,
+        IReadOnlyList<SummaryItem> SolverStatistics,
         IReadOnlyList<TeacherScheduleResult> TeacherSchedules,
         IReadOnlyList<ClassScheduleSummary> Classes,
         IReadOnlyList<RoomChangeResult> RoomChanges);
