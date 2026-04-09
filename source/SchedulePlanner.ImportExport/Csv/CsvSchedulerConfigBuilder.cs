@@ -47,15 +47,11 @@ public sealed class CsvSchedulerConfigBuilder : ICsvSchedulerConfigBuilder
     public async Task<SchedulerOptions> BuildAsync(CancellationToken cancellationToken = default)
     {
         var teachers = await ReadTeachersAsync(cancellationToken).ConfigureAwait(false);
-        var departments = await ReadDepartmentsAsync(cancellationToken).ConfigureAwait(false);
-        var teacherDepartments = await ReadTeacherDepartmentsAsync(cancellationToken).ConfigureAwait(false);
         var classes = await ReadClassesAsync(cancellationToken).ConfigureAwait(false);
 
         var config = new SchedulerOptions
         {
             Teachers = teachers,
-            Departments = departments,
-            TeacherDepartments = teacherDepartments,
             Classes = classes
         };
 
@@ -81,7 +77,8 @@ public sealed class CsvSchedulerConfigBuilder : ICsvSchedulerConfigBuilder
                 Id = row[0].ToString(CultureInfo.InvariantCulture),
                 FullName = row[1],
                 PreferredRoom = row.ElementAtOrDefault(2) ?? string.Empty,
-                TargetLoadBlocks = row.Length > 3 && int.TryParse(row[3], out var target) ? target : 10
+                TargetLoadBlocks = row.Length > 3 && int.TryParse(row[3], out var target) ? target : 10,
+                Departments = row.Length > 4 ? row[4].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) : Array.Empty<string>()
             });
         }
 
@@ -117,47 +114,7 @@ public sealed class CsvSchedulerConfigBuilder : ICsvSchedulerConfigBuilder
         return list;
     }
 
-    private async Task<List<Department>> ReadDepartmentsAsync(CancellationToken cancellationToken)
-    {
-        var rows = await ReadCsvAsync(_options.DepartmentsFile, cancellationToken).ConfigureAwait(false);
-        var list = new List<Department>(rows.Count);
-        foreach (var row in rows)
-        {
-            if (row.Length < 2)
-            {
-                throw new InvalidOperationException("Departments CSV must contain Key and Name columns.");
-            }
 
-            list.Add(new Department
-            {
-                Key = row[0],
-                Name = row[1]
-            });
-        }
-
-        return list;
-    }
-
-    private async Task<List<TeacherDepartment>> ReadTeacherDepartmentsAsync(CancellationToken cancellationToken)
-    {
-        var rows = await ReadCsvAsync(_options.TeacherDepartmentsFile, cancellationToken).ConfigureAwait(false);
-        var list = new List<TeacherDepartment>(rows.Count);
-        foreach (var row in rows)
-        {
-            if (row.Length < 2)
-            {
-                throw new InvalidOperationException("TeacherDepartments CSV must contain TeacherId and Department columns.");
-            }
-
-            list.Add(new TeacherDepartment
-            {
-                TeacherId = row[0],
-                Department = row[1]
-            });
-        }
-
-        return list;
-    }
 
     private async Task<List<string[]>> ReadCsvAsync(string fileName, CancellationToken cancellationToken)
     {

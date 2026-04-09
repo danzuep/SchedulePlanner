@@ -42,10 +42,9 @@ public class ExcelSchedulerConfigWriter
         using var workbook = new XLWorkbook();
 
         AddSettingsWorksheet(workbook, data);
-        AddWorksheet(workbook, data.Teachers, nameof(data.Teachers));
+        var teachersDto = data.Teachers.Select(t => new TeacherDto(t)).ToArray();
+        AddWorksheet(workbook, teachersDto, nameof(data.Teachers));
         AddWorksheet(workbook, data.Classes, nameof(data.Classes));
-        AddWorksheet(workbook, data.Departments, nameof(data.Departments));
-        AddWorksheet(workbook, data.TeacherDepartments, nameof(data.TeacherDepartments));
 
         var fullPath = GetFullPath(filePath, addTimestamp);
         workbook.SaveAs(fullPath);

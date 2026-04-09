@@ -39,11 +39,6 @@ namespace SchedulePlanner.Core
                 throw new InvalidOperationException("At least one teacher must be defined.");
             }
 
-            if (config.TeacherDepartments == null || !config.TeacherDepartments.Any())
-            {
-                throw new InvalidOperationException("At least one department assignment is required.");
-            }
-
             var solverTimeLimitSeconds = config.SolverTimeLimitSeconds > 0
                 ? config.SolverTimeLimitSeconds
                 : 10.0;

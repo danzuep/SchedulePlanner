@@ -7,6 +7,8 @@ using SchedulePlanner.Core;
 
 namespace SchedulePlanner.ImportExport.Excel;
 
+internal record TempTeacherDepartment(string TeacherId, string Department);
+
 public interface IExcelSchedulerConfigReader
 {
     Task<SchedulerOptions> BuildAsync(CancellationToken cancellationToken = default);
@@ -35,12 +37,30 @@ public sealed class ExcelSchedulerConfigReader : IExcelSchedulerConfigReader
 
         using var workbook = new XLWorkbook(fullPath);
 
+        var teachers = ReadTeachers(workbook);
+        var teacherDepartments = ReadTeacherDepartments(workbook);
+
+        // For backward compatibility, set Departments from TeacherDepartments if not set
+        if (teacherDepartments.Any())
+        {
+            var departmentsByTeacher = teacherDepartments
+                .GroupBy<TempTeacherDepartment, string>(td => td.TeacherId, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.Select(td => td.Department).ToList(), StringComparer.OrdinalIgnoreCase);
+
+            for (int i = 0; i < teachers.Count; i++)
+            {
+                var teacher = teachers[i];
+                if (departmentsByTeacher.TryGetValue(teacher.Id, out var deps) && (teacher.Departments == null || !teacher.Departments.Any()))
+                {
+                    teachers[i] = teacher with { Departments = deps };
+                }
+            }
+        }
+
         var config = new SchedulerOptions
         {
-            Teachers = ReadTeachers(workbook),
+            Teachers = teachers,
             Classes = ReadClasses(workbook),
-            Departments = ReadDepartments(workbook),
-            TeacherDepartments = ReadTeacherDepartments(workbook),
             Days = ReadDays(workbook)
         };
 
@@ -64,8 +84,23 @@ public sealed class ExcelSchedulerConfigReader : IExcelSchedulerConfigReader
             Id = row.GetString("Id"),
             FullName = row.GetString("FullName"),
             PreferredRoom = row.GetString("PreferredRoom"),
-            TargetLoadBlocks = row.GetInt("TargetLoadBlocks", 10)
+            TargetLoadBlocks = row.GetInt("TargetLoadBlocks", 10),
+            Departments = row.GetString("Departments")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? Array.Empty<string>()
         });
+    }
+
+    private static List<TempTeacherDepartment> ReadTeacherDepartments(XLWorkbook workbook)
+    {
+        if (!workbook.Worksheets.Contains("TeacherDepartments"))
+        {
+            return new List<TempTeacherDepartment>();
+        }
+        var ws = workbook.Worksheet("TeacherDepartments");
+        return ReadRows(ws, row => new TempTeacherDepartment
+        (
+            TeacherId: row.GetString("TeacherId"),
+            Department: row.GetString("Department")
+        ));
     }
 
     private static List<Class> ReadClasses(XLWorkbook workbook)
@@ -81,25 +116,7 @@ public sealed class ExcelSchedulerConfigReader : IExcelSchedulerConfigReader
         });
     }
 
-    private static List<Department> ReadDepartments(XLWorkbook workbook)
-    {
-        var ws = workbook.Worksheet("Departments");
-        return ReadRows(ws, row => new Department
-        {
-            Key = row.GetString("Key"),
-            Name = row.GetString("Name")
-        });
-    }
 
-    private static List<TeacherDepartment> ReadTeacherDepartments(XLWorkbook workbook)
-    {
-        var ws = workbook.Worksheet("TeacherDepartments");
-        return ReadRows(ws, row => new TeacherDepartment
-        {
-            TeacherId = row.GetString("TeacherId"),
-            Department = row.GetString("Department")
-        });
-    }
 
     private static IReadOnlyList<DayOfWeek> ReadDays(XLWorkbook workbook)
     {

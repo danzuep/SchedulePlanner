@@ -27,16 +27,17 @@ public sealed record SchedulerOptions : IOptions<SchedulerOptions>
     public int WeekDistributionPenalty { get; set; } = 1;
     public int ClassDayClusteringPenalty { get; set; } = 1;
     public int ClassBlockConsistencyPenalty { get; set; } = 1;
-    public double SolverTimeLimitSeconds { get; set; } = 10.0;
+    public double SolverTimeLimitSeconds { get; set; } = 30.0;
     public List<Teacher> Teachers { get; set; } = new();
     public List<Class> Classes { get; set; } = new();
-    public List<Department> Departments { get; set; } = new();
-    public List<TeacherDepartment> TeacherDepartments { get; set; } = new();
     public List<PresetBlockConfig> PresetBlocks { get; set; } = new()
     {
         new PresetBlockConfig(6, "Lunch", MonTueWedThuFri),
         new PresetBlockConfig(2, "PACT", MonTueWed),
-        new PresetBlockConfig(3, "Break", MonTueWed)
+        //new PresetBlockConfig(2, "Assembly", ThuFri),
+        //new PresetBlockConfig(3, "Break", MonTueWedThuFri),
+        new PresetBlockConfig(3, "Break", MonTueWed),
+        new PresetBlockConfig(0, "Free", [DayOfWeek.Friday])
     };
     private static readonly IReadOnlyList<DayOfWeek> MonTueWedThuFri =
     [
@@ -52,6 +53,11 @@ public sealed record SchedulerOptions : IOptions<SchedulerOptions>
         DayOfWeek.Tuesday,
         DayOfWeek.Wednesday
     ];
+    private static readonly IReadOnlyList<DayOfWeek> ThuFri =
+    [
+        DayOfWeek.Thursday,
+        DayOfWeek.Friday
+    ];
 }
 
 public sealed record Teacher
@@ -60,7 +66,8 @@ public sealed record Teacher
     public string FullName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string PreferredRoom { get; set; } = string.Empty;
-    public int TargetLoadBlocks { get; set; } = 16;
+    public int TargetLoadBlocks { get; set; } = 20;
+    public IReadOnlyList<string> Departments { get; set; } = new List<string>();
     public override string ToString() => $"{FullName} ({PreferredRoom})";
 }
 
@@ -73,17 +80,7 @@ public sealed record Class
     public int WeeklyBlocks { get; set; } = 4;
 }
 
-public sealed record Department
-{
-    public string Key { get; set; } = string.Empty;
-    public string Name { get; set; } = string.Empty;
-}
 
-public sealed record TeacherDepartment
-{
-    public string TeacherId { get; set; } = string.Empty;
-    public string Department { get; set; } = string.Empty;
-}
 
 public sealed record PresetBlockConfig(
     int Index,

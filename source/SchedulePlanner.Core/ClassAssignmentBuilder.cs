@@ -9,23 +9,24 @@ namespace SchedulePlanner.Core
 
     public sealed class ClassAssignmentBuilder : IClassAssignmentBuilder
     {
-        public IReadOnlyList<ClassAssignment> BuildClassAssignments(SchedulerOptions config)
-        {
-            var comparer = StringComparer.OrdinalIgnoreCase;
+    public IReadOnlyList<ClassAssignment> BuildClassAssignments(SchedulerOptions config)
+    {
+        var comparer = StringComparer.OrdinalIgnoreCase;
 
-            var teachersById = config.Teachers
-                .ToDictionary(t => t.Id, t => t, comparer);
+        var teachersById = config.Teachers
+            .ToDictionary(t => t.Id, t => t, comparer);
 
-            var assignmentsByDepartment = config.TeacherDepartments
-                .Where(a => !string.IsNullOrWhiteSpace(a.Department))
-                .GroupBy(a => a.Department, comparer)
-                .ToDictionary(
-                    g => g.Key,
-                    g => g.Select(a => a.TeacherId)
-                        .Where(id => !string.IsNullOrWhiteSpace(id))
-                        .Distinct(comparer)
-                        .ToList(),
-                    comparer);
+        var assignmentsByDepartment = config.Teachers
+            .SelectMany(t => t.Departments.Select(d => new { Department = d, TeacherId = t.Id }))
+            .Where(a => !string.IsNullOrWhiteSpace(a.Department))
+            .GroupBy(a => a.Department, comparer)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Select(a => a.TeacherId)
+                    .Where(id => !string.IsNullOrWhiteSpace(id))
+                    .Distinct(comparer)
+                    .ToList(),
+                comparer);
 
             var results = new List<ClassAssignment>(config.Classes.Count);
 

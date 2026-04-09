@@ -1,6 +1,6 @@
 # Schedule Planner
 
-[Download SchedulePlanner](https://danzuep.github.io/SchedulePlanner/download/)
+[Download SchedulePlanner](https://danzuep.github.io/SchedulePlanner/)
 
 ## The Challenge of Classroom Scheduling
 

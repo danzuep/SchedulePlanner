@@ -8,7 +8,6 @@ namespace SchedulePlanner.ImportExport.Excel
 {
     public sealed class ImportExportService : IService
     {
-        private readonly ImportExportOptions _options;
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly ILogger<ImportExportService> _logger;
 
@@ -16,29 +15,29 @@ namespace SchedulePlanner.ImportExport.Excel
         {
             _serviceScopeFactory = serviceScopeFactory ?? throw new ArgumentNullException(nameof(serviceScopeFactory));
             _logger = logger ?? NullLogger<ImportExportService>.Instance;
-            using var scope = _serviceScopeFactory.CreateScope();
-            var config = scope.ServiceProvider.GetRequiredService<IOptions<ImportExportOptions>>();
-            _options = config.Value;
         }
 
         public async Task RunAsync(CancellationToken cancellationToken = default)
         {
             using var scope = _serviceScopeFactory.CreateScope();
+            var provider = scope.ServiceProvider;
+            var importExportOptions = provider.GetRequiredService<IOptionsSnapshot<ImportExportOptions>>().Value;
 
             _logger.LogDebug("Exporting template...");
-            var exportService = scope.ServiceProvider.GetRequiredService<ExportService>();
-            var config = scope.ServiceProvider.GetRequiredService<IOptionsSnapshot<SchedulerOptions>>();
-            await exportService.ExportAsync(config.Value, _options.FilePath);
+            var exportService = provider.GetRequiredService<ExportService>();
+            var schedulerOptions = provider.GetRequiredService<IOptionsSnapshot<SchedulerOptions>>().Value;
+            var configFile = await exportService.ExportAsync(schedulerOptions, importExportOptions.FilePath);
             _logger.LogDebug("Export completed successfully.");
 
             _logger.LogDebug("Processing workbook...");
-            var schedulerLogger = scope.ServiceProvider.GetRequiredService<ILogger<ExcelSchedulerConfigReader>>();
-            var schedulingLogger = scope.ServiceProvider.GetRequiredService<ILogger<SchedulingService>>();
-            var reader = new ExcelSchedulerConfigReader(_options, schedulerLogger);
+            var schedulerLogger = provider.GetRequiredService<ILogger<ExcelSchedulerConfigReader>>();
+            var schedulingLogger = provider.GetRequiredService<ILogger<SchedulingService>>();
+            var importOptions = new ImportExportOptions { FilePath = configFile };
+            var reader = new ExcelSchedulerConfigReader(importOptions, schedulerLogger);
             var importService = new ImportService(reader, schedulingLogger);
             var result = await importService.RunAsync();
             _logger.LogDebug("Processing completed successfully.");
-            var filePath = await exportService.ExportAsync(result, _options.FilePath, addTimestamp: true);
+            var filePath = await exportService.ExportAsync(result, importExportOptions.FilePath, addTimestamp: true);
             _logger.LogDebug("Result written successfully.");
         }
     }
