@@ -1,0 +1,6 @@
+baseURL: https://danzuep.github.io/SchedulePlanner
+locale: en-gb
+title: Schedule Planner
+params.description: Schedule Planner demo
+params.author: Daniel Collingwood
+theme: ["PaperMod"]

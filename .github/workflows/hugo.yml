@@ -4,9 +4,12 @@
 name: Deploy Hugo site to Pages
 
 on:
-  # Runs on pushes targeting the [$default-branch]
+  # Runs on new GitHub releases
+  release:
+    types: [published]
+  # Runs on pushes targeting the hugo branch
   push:
-    branches: [hugo-source]
+    branches: [hugo]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -33,7 +36,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      HUGO_VERSION: 0.159.1
+      HUGO_VERSION: 0.160.1
     steps:
       - name: Install Hugo CLI
         run: |
@@ -44,7 +47,6 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v6
         with:
-          ref: hugo-source
           submodules: recursive
       - name: Setup Pages
         id: pages

@@ -416,3 +416,7 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Hugo build lock file and public output
+hugo-source/.hugo_build.lock
+hugo-source/public/
