@@ -23,6 +23,9 @@ namespace SchedulePlanner.Core
             PreventTeachersFromBeingDoubleBooked(context, variables, cancellationToken);
             PreventRoomsFromBeingDoubleBooked(context, variables, cancellationToken);
             PreventSchedulingInDefaultBlocks(context, variables, config, cancellationToken);
+            PreventStreamConflicts(context, variables, cancellationToken);
+            PreventRoomBufferConflicts(context, variables, config, cancellationToken);
+            PreventUnavailableScheduling(context, variables, config, cancellationToken);
         }
 
         private void PreventSchedulingInDefaultBlocks(
@@ -164,6 +167,116 @@ namespace SchedulePlanner.Core
                 }
             }
         }
+
+        private void PreventStreamConflicts(
+            SchedulingContext context,
+            ScheduleVariables variables,
+            CancellationToken cancellationToken)
+        {
+            var streamedAssignments = context.ClassAssignments
+                .Where(a => a.Stream != null)
+                .ToList();
+
+            for (var i = 0; i < streamedAssignments.Count; ++i)
+            {
+                for (var j = i + 1; j < streamedAssignments.Count; ++j)
+                {
+                    var stream1 = streamedAssignments[i].Stream!;
+                    var stream2 = streamedAssignments[j].Stream!;
+
+                    // Check if streams have intersecting linked subjects
+                    var intersect = stream1.LinkedSubjects.Intersect(stream2.LinkedSubjects, StringComparer.OrdinalIgnoreCase);
+                    if (intersect.Any())
+                    {
+                        // Prevent overlap
+                        for (var day = 0; day < context.NumDays; ++day)
+                        {
+                            for (var block = 0; block < context.BlocksPerDay; ++block)
+                            {
+                                context.Model.Add(
+                                    variables.Assignment[streamedAssignments[i].Index, day, block] +
+                                    variables.Assignment[streamedAssignments[j].Index, day, block] <= 1);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        private void PreventRoomBufferConflicts(
+            SchedulingContext context,
+            ScheduleVariables variables,
+            SchedulerOptions config,
+            CancellationToken cancellationToken)
+        {
+            foreach (var roomGroup in context.RoomGroups)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var roomId = roomGroup.Key;
+                var buffer = GetRoomBuffer(config, roomId);
+                if (buffer <= 0) continue;
+
+                var roomClasses = roomGroup.Value;
+
+                for (var day = 0; day < context.NumDays; ++day)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    for (var b = 0; b < context.BlocksPerDay - buffer; ++b)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        var assignedAtB = roomClasses
+                            .Select(entry => variables.Assignment[entry.Index, day, b])
+                            .ToList();
+
+                        var assignedAtBPlus = roomClasses
+                            .Select(entry => variables.Assignment[entry.Index, day, b + buffer])
+                            .ToList();
+
+                        context.Model.Add(LinearExpr.Sum(assignedAtB) + LinearExpr.Sum(assignedAtBPlus) <= 1);
+                    }
+                }
+            }
+        }
+
+        private static int GetRoomBuffer(SchedulerOptions config, string roomId)
+        {
+            return config.Rooms.FirstOrDefault(r => r.Id == roomId)?.SetupTimeBuffer ?? 0;
+        }
+
+        private void PreventUnavailableScheduling(
+            SchedulingContext context,
+            ScheduleVariables variables,
+            SchedulerOptions config,
+            CancellationToken cancellationToken)
+        {
+            foreach (var teacherEntry in context.TeacherGroups.Values)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var teacher = teacherEntry.Teacher;
+                if (teacher.AvailabilityPatterns.Count == 0) continue;
+
+                var availableDays = new HashSet<DayOfWeek>(teacher.AvailabilityPatterns);
+
+                for (var dayIndex = 0; dayIndex < context.NumDays; ++dayIndex)
+                {
+                    var day = config.Days[dayIndex];
+                    if (!availableDays.Contains(day))
+                    {
+                        foreach (var cls in teacherEntry.Classes)
+                        {
+                            for (var block = 0; block < context.BlocksPerDay; ++block)
+                            {
+                                context.Model.Add(variables.Assignment[cls.Index, dayIndex, block] == 0);
+                            }
+                        }
+        }
+    }
+            }
+        }
     }
 
     public sealed record SchedulingContext(
@@ -172,7 +285,7 @@ namespace SchedulePlanner.Core
         IReadOnlyDictionary<string, TeacherGroup> TeacherGroups,
         IReadOnlyDictionary<string, IReadOnlyList<ClassAssignment>> RoomGroups,
         int NumDays,
-        int BlocksPerDay);
+        IReadOnlyList<int> BlocksPerDayList);
 
-    public sealed record ScheduleVariables(BoolVar[,,] Assignment);
+    public sealed record ScheduleVariables(BoolVar[][][] Assignment);
 }

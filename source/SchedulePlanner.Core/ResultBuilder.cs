@@ -103,8 +103,8 @@ namespace SchedulePlanner.Core
                         entry.Config.Key,
                         entry.Config.Name,
                         entry.Config.Department,
-                        entry.Teacher.Id,
-                        entry.Teacher.FullName,
+                        entry.Teachers.First().Id,
+                        entry.Teachers.First().FullName,
                         entry.Room,
                         scheduledBlocks,
                         entry.Config.WeeklyBlocks));
@@ -134,14 +134,19 @@ namespace SchedulePlanner.Core
                 }
             }
 
+            var roomUtilizations = CalculateRoomUtilizations(context, variables, config, solver);
+            var streamSchedules = BuildStreamSchedules(context, variables, config, solver);
+
             return new ScheduleResult(
-                status.ToString(),
+                hasSolution ? "Optimal" : "Infeasible",
                 hasSolution,
                 hasSolution ? solver.ObjectiveValue : null,
-                ParseSolverStatistics(hasSolution ? solver.ResponseStats() : string.Empty),
+                new[] { new SummaryItem("SolverStatus", status.ToString()) },
                 teacherSchedules,
                 classSummaries,
-                roomChanges);
+                roomChanges,
+                roomUtilizations,
+                streamSchedules);
         }
 
         private static IReadOnlyList<SummaryItem> ParseSolverStatistics(string stats)
@@ -165,6 +170,96 @@ namespace SchedulePlanner.Core
             }
 
             return statistics;
+        }
+
+        private static IReadOnlyList<RoomUtilization> CalculateRoomUtilizations(
+            SchedulingContext context,
+            ScheduleVariables variables,
+            SchedulerOptions config,
+            CpSolver solver)
+        {
+            var utilizations = new List<RoomUtilization>();
+            var totalSlots = context.NumDays * context.BlocksPerDay;
+
+            foreach (var roomGroup in context.RoomGroups)
+            {
+                var roomId = roomGroup.Key;
+                var assignedSlots = 0;
+
+                foreach (var assignment in roomGroup.Value)
+                {
+                    for (var day = 0; day < context.NumDays; ++day)
+                    {
+                        for (var block = 0; block < context.BlocksPerDay; ++block)
+                        {
+                            if (solver.BooleanValue(variables.Assignment[assignment.Index, day, block]))
+                            {
+                                assignedSlots++;
+                            }
+                        }
+                    }
+                }
+
+                var utilization = totalSlots > 0 ? (double)assignedSlots / totalSlots * 100 : 0;
+                utilizations.Add(new RoomUtilization(roomId, utilization));
+            }
+
+            return utilizations;
+        }
+
+        private static IReadOnlyList<StreamScheduleResult> BuildStreamSchedules(
+            SchedulingContext context,
+            ScheduleVariables variables,
+            SchedulerOptions config,
+            CpSolver solver)
+        {
+            var streamSchedules = new List<StreamScheduleResult>();
+
+            foreach (var assignment in context.ClassAssignments.Where(a => a.Stream != null))
+            {
+                var stream = assignment.Stream!;
+                var days = new List<DayScheduleResult>();
+
+                for (var day = 0; day < context.NumDays; ++day)
+                {
+                    var blocks = new List<BlockScheduleResult>();
+
+                    for (var blockIndex = 0; blockIndex < context.BlocksPerDay; ++blockIndex)
+                    {
+                        if (solver.BooleanValue(variables.Assignment[assignment.Index, day, blockIndex]))
+                        {
+                            blocks.Add(new BlockScheduleResult(
+                                blockIndex,
+                                false,
+                                assignment.Config.Key,
+                                assignment.Config.Name,
+                                assignment.Room,
+                                assignment.Config.Department));
+                        }
+                        else
+                        {
+                            blocks.Add(new BlockScheduleResult(
+                                blockIndex,
+                                true,
+                                null,
+                                null,
+                                null,
+                                null));
+                        }
+                    }
+
+                    days.Add(new DayScheduleResult(config.Days[day], blocks));
+                }
+
+                streamSchedules.Add(new StreamScheduleResult(
+                    stream.Id,
+                    assignment.Config.Key,
+                    assignment.Teachers.First().Id,
+                    assignment.Room,
+                    days));
+            }
+
+            return streamSchedules;
         }
     }
 }

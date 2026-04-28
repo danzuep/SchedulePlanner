@@ -420,3 +420,4 @@ FodyWeavers.xsd
 # Hugo build lock file and public output
 hugo-source/.hugo_build.lock
 hugo-source/public/
+.kilo/package-lock.json

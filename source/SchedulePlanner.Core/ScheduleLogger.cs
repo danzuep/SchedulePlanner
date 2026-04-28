@@ -68,6 +68,26 @@ namespace SchedulePlanner.Core
                     classSummary.RequiredBlocks);
             }
 
+            // Log stream completion rates
+            foreach (var streamSchedule in result.StreamSchedules)
+            {
+                var totalBlocks = streamSchedule.Days.Sum(d => d.Blocks.Count(b => !b.IsFree));
+                _logger.LogInformation(
+                    "Stream {StreamId} for class {ClassKey} scheduled for {Count} blocks.",
+                    streamSchedule.StreamId,
+                    streamSchedule.ClassKey,
+                    totalBlocks);
+            }
+
+            // Log room utilization
+            foreach (var roomUtil in result.RoomUtilizations)
+            {
+                _logger.LogInformation(
+                    "Room {RoomId} utilization: {Percent:F2}%.",
+                    roomUtil.RoomId,
+                    roomUtil.UtilizationPercent);
+            }
+
             foreach (var roomChange in result.RoomChanges)
             {
                 _logger.LogInformation(
