@@ -44,36 +44,36 @@ namespace SchedulePlanner.Core
                         if (teacherEntry.Classes.FirstOrDefault(entry =>
                             solver.BooleanValue(variables.Assignment[entry.Index][day][blockIndex])) is ClassAssignment assigned)
                         {
-                                blocks.Add(new BlockScheduleResult(
-                                    blockIndex,
-                                    false,
-                                    assigned.Config.Key,
-                                    assigned.Config.Name,
-                                    assigned.Room,
-                                    assigned.Config.Department));
-                            }
-                            else if (config.PresetBlocks.FirstOrDefault(b => b.Index == blockIndex &&
-                                b.Days.Contains(config.Days[day])) is PresetBlockConfig presetBlock)
-                            {
-                                blocks.Add(new BlockScheduleResult(
-                                    blockIndex,
-                                    false,
-                                    presetBlock.Name,
-                                    presetBlock.Name,
-                                    null,
-                                    "Preset"));
-                            }
-                            else
-                            {
-                                blocks.Add(new BlockScheduleResult(
-                                    blockIndex,
-                                    true,
-                                    null,
-                                    null,
-                                    null,
-                                    null));
-                            }
+                            blocks.Add(new BlockScheduleResult(
+                                blockIndex,
+                                false,
+                                assigned.Config.Key,
+                                assigned.Config.Name,
+                                assigned.Room,
+                                assigned.Config.Department));
                         }
+                        else if (config.PresetBlocks.FirstOrDefault(b => b.Index == blockIndex &&
+                            b.Days.Contains(config.Days[day])) is PresetBlockConfig presetBlock)
+                        {
+                            blocks.Add(new BlockScheduleResult(
+                                blockIndex,
+                                false,
+                                presetBlock.Name,
+                                presetBlock.Name,
+                                null,
+                                "Preset"));
+                        }
+                        else
+                        {
+                            blocks.Add(new BlockScheduleResult(
+                                blockIndex,
+                                true,
+                                null,
+                                null,
+                                null,
+                                null));
+                        }
+                    }
 
                         days.Add(new DayScheduleResult(config.Days[day], blocks));
                     }
