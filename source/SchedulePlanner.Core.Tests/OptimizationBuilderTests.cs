@@ -89,22 +89,25 @@ namespace SchedulePlanner.Core.Tests
             var teacherGroups = classAssignmentBuilder.BuildTeacherGroups(classAssignments);
             var roomGroups = classAssignmentBuilder.BuildRoomGroups(classAssignments);
 
+            var blocksPerDayList = new int[config.Days.Count].Select(_ => config.BlocksPerDay).ToList();
             var context = new SchedulingContext(
                 new CpModel(),
                 classAssignments,
                 teacherGroups,
                 roomGroups,
                 config.Days.Count,
-                config.BlocksPerDay);
+                blocksPerDayList);
 
-            var assignment = new BoolVar[classAssignments.Count, config.Days.Count, config.BlocksPerDay];
+            var assignment = new BoolVar[classAssignments.Count][][];
             for (var cls = 0; cls < classAssignments.Count; ++cls)
             {
+                assignment[cls] = new BoolVar[config.Days.Count][];
                 for (var day = 0; day < config.Days.Count; ++day)
                 {
-                    for (var block = 0; block < config.BlocksPerDay; ++block)
+                    assignment[cls][day] = new BoolVar[blocksPerDayList[day]];
+                    for (var block = 0; block < blocksPerDayList[day]; ++block)
                     {
-                        assignment[cls, day, block] = context.Model.NewBoolVar(
+                        assignment[cls][day][block] = context.Model.NewBoolVar(
                             $"assign_{classAssignments[cls].Config.Key}_day{day}_block{block}");
                     }
                 }
@@ -148,22 +151,25 @@ namespace SchedulePlanner.Core.Tests
             var teacherGroups = classAssignmentBuilder.BuildTeacherGroups(classAssignments);
             var roomGroups = classAssignmentBuilder.BuildRoomGroups(classAssignments);
 
+            var blocksPerDayList = new int[config.Days.Count].Select(_ => config.BlocksPerDay).ToList();
             var context = new SchedulingContext(
                 new CpModel(),
                 classAssignments,
                 teacherGroups,
                 roomGroups,
                 config.Days.Count,
-                config.BlocksPerDay);
+                blocksPerDayList);
 
-            var assignment = new BoolVar[classAssignments.Count, config.Days.Count, config.BlocksPerDay];
+            var assignment = new BoolVar[classAssignments.Count][][];
             for (var cls = 0; cls < classAssignments.Count; ++cls)
             {
+                assignment[cls] = new BoolVar[config.Days.Count][];
                 for (var day = 0; day < config.Days.Count; ++day)
                 {
-                    for (var block = 0; block < config.BlocksPerDay; ++block)
+                    assignment[cls][day] = new BoolVar[blocksPerDayList[day]];
+                    for (var block = 0; block < blocksPerDayList[day]; ++block)
                     {
-                        assignment[cls, day, block] = context.Model.NewBoolVar(
+                        assignment[cls][day][block] = context.Model.NewBoolVar(
                             $"assign_{classAssignments[cls].Config.Key}_day{day}_block{block}");
                     }
                 }

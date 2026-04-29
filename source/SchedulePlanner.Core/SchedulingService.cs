@@ -266,6 +266,24 @@ namespace SchedulePlanner.Core
 
     public sealed record WhatIfComparison(IReadOnlyList<string> Differences);
 
+    public sealed record SchedulingContext(
+        CpModel Model,
+        IReadOnlyList<ClassAssignment> ClassAssignments,
+        IReadOnlyDictionary<string, TeacherGroup> TeacherGroups,
+        IReadOnlyDictionary<string, IReadOnlyList<ClassAssignment>> RoomGroups,
+        int NumDays,
+        IReadOnlyList<int> BlocksPerDayList);
+
+    public sealed class ScheduleVariables
+    {
+        public BoolVar[][][] Assignment { get; }
+
+        public ScheduleVariables(BoolVar[][][] assignment)
+        {
+            Assignment = assignment;
+        }
+    }
+
     public sealed record ScheduleResult(
         string Status,
         bool HasSolution,
