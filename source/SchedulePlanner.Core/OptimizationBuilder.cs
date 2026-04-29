@@ -685,8 +685,35 @@ namespace SchedulePlanner.Core
             CancellationToken cancellationToken)
         {
             var penalties = new List<CommonPlanningPenalty>();
+            var coTeachingPairs = GetCoTeachingPairs(context);
 
-            // Collect unique co-teaching pairs
+            foreach (var (teacher1Id, teacher2Id) in coTeachingPairs)
+            {
+                var teacher1 = context.TeacherGroups[teacher1Id];
+                var teacher2 = context.TeacherGroups[teacher2Id];
+
+                for (var dayIndex = 0; dayIndex < context.NumDays; ++dayIndex)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var day = config.Days[dayIndex];
+
+                    var penalty = AddCommonPlanningPenaltyForPair(
+                        context, variables, teacher1, teacher2, teacher1Id, teacher2Id, dayIndex, day);
+                    penalties.Add(penalty);
+                }
+            }
+
+            // Add to objective
+            if (penalties.Count > 0)
+            {
+                context.Model.Minimize(commonPlanningPenaltyWeight * LinearExpr.Sum(penalties.Select(p => p.Var)));
+            }
+
+            return penalties;
+        }
+
+        private static HashSet<(string, string)> GetCoTeachingPairs(SchedulingContext context)
+        {
             var coTeachingPairs = new HashSet<(string, string)>();
             foreach (var assignment in context.ClassAssignments)
             {
@@ -702,66 +729,66 @@ namespace SchedulePlanner.Core
                     }
                 }
             }
+            return coTeachingPairs;
+        }
 
-            foreach (var (teacher1Id, teacher2Id) in coTeachingPairs)
+        private static CommonPlanningPenalty AddCommonPlanningPenaltyForPair(
+            SchedulingContext context,
+            ScheduleVariables variables,
+            TeacherGroup teacher1,
+            TeacherGroup teacher2,
+            string teacher1Id,
+            string teacher2Id,
+            int dayIndex,
+            DayOfWeek day)
+        {
+            var (free1Vars, free2Vars) = CreateFreeVars(context, variables, teacher1, teacher2, teacher1Id, teacher2Id, dayIndex);
+
+            // Both free vars
+            var bothFreeVars = new BoolVar[context.BlocksPerDayList[dayIndex]];
+            for (var block = 0; block < context.BlocksPerDayList[dayIndex]; ++block)
             {
-                var teacher1 = context.TeacherGroups[teacher1Id];
-                var teacher2 = context.TeacherGroups[teacher2Id];
-
-                for (var dayIndex = 0; dayIndex < context.NumDays; ++dayIndex)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    var day = config.Days[dayIndex];
-
-                    // Create BoolVars for free status
-                    var free1Vars = new BoolVar[context.BlocksPerDayList[dayIndex]];
-                    var free2Vars = new BoolVar[context.BlocksPerDayList[dayIndex]];
-
-                    for (var block = 0; block < context.BlocksPerDayList[dayIndex]; ++block)
-                    {
-                        // Teacher1 free if no class assigned
-                        var teacher1Busy = LinearExpr.Sum(teacher1.Classes.Select(cls => variables.Assignment[cls.Index][dayIndex][block]));
-                        free1Vars[block] = context.Model.NewBoolVar($"free_{teacher1Id}_{dayIndex}_{block}");
-                        context.Model.Add(free1Vars[block] == (teacher1Busy == 0));
-
-                        // Teacher2 free
-                        var teacher2Busy = LinearExpr.Sum(teacher2.Classes.Select(cls => variables.Assignment[cls.Index][dayIndex][block]));
-                        free2Vars[block] = context.Model.NewBoolVar($"free_{teacher2Id}_{dayIndex}_{block}");
-                        context.Model.Add(free2Vars[block] == (teacher2Busy == 0));
-                    }
-
-                    // Both free vars
-                    var bothFreeVars = new BoolVar[context.BlocksPerDayList[dayIndex]];
-                    for (var block = 0; block < context.BlocksPerDayList[dayIndex]; ++block)
-                    {
-                        bothFreeVars[block] = context.Model.NewBoolVar($"both_free_{teacher1Id}_{teacher2Id}_{dayIndex}_{block}");
-                        context.Model.AddBoolAnd([free1Vars[block], free2Vars[block]], bothFreeVars[block]);
-                    }
-
-                    // Has overlapping free
-                    var hasOverlappingFree = context.Model.NewBoolVar($"has_overlapping_free_{teacher1Id}_{teacher2Id}_{dayIndex}");
-                    context.Model.AddBoolOr(bothFreeVars, hasOverlappingFree);
-
-                    // Penalty if no overlapping
-                    var penaltyVar = context.Model.NewBoolVar($"common_planning_penalty_{teacher1Id}_{teacher2Id}_{dayIndex}");
-                    context.Model.Add(penaltyVar == (1 - hasOverlappingFree));
-
-                    penalties.Add(new CommonPlanningPenalty(
-                        penaltyVar,
-                        teacher1Id,
-                        teacher2Id,
-                        day));
-                }
+                bothFreeVars[block] = context.Model.NewBoolVar($"both_free_{teacher1Id}_{teacher2Id}_{dayIndex}_{block}");
+                context.Model.AddBoolAnd([free1Vars[block], free2Vars[block]], bothFreeVars[block]);
             }
 
-            // Add to objective
-            if (penalties.Count > 0)
+            // Has overlapping free
+            var hasOverlappingFree = context.Model.NewBoolVar($"has_overlapping_free_{teacher1Id}_{teacher2Id}_{dayIndex}");
+            context.Model.AddBoolOr(bothFreeVars, hasOverlappingFree);
+
+            // Penalty if no overlapping
+            var penaltyVar = context.Model.NewBoolVar($"common_planning_penalty_{teacher1Id}_{teacher2Id}_{dayIndex}");
+            context.Model.Add(penaltyVar == (1 - hasOverlappingFree));
+
+            return new CommonPlanningPenalty(penaltyVar, teacher1Id, teacher2Id, day);
+        }
+
+        private static (BoolVar[] Free1Vars, BoolVar[] Free2Vars) CreateFreeVars(
+            SchedulingContext context,
+            ScheduleVariables variables,
+            TeacherGroup teacher1,
+            TeacherGroup teacher2,
+            string teacher1Id,
+            string teacher2Id,
+            int dayIndex)
+        {
+            var free1Vars = new BoolVar[context.BlocksPerDayList[dayIndex]];
+            var free2Vars = new BoolVar[context.BlocksPerDayList[dayIndex]];
+
+            for (var block = 0; block < context.BlocksPerDayList[dayIndex]; ++block)
             {
-                context.Model.Minimize(commonPlanningPenaltyWeight * LinearExpr.Sum(penalties.Select(p => p.Var)));
+                // Teacher1 free if no class assigned
+                var teacher1Busy = LinearExpr.Sum(teacher1.Classes.Select(cls => variables.Assignment[cls.Index][dayIndex][block]));
+                free1Vars[block] = context.Model.NewBoolVar($"free_{teacher1Id}_{dayIndex}_{block}");
+                context.Model.Add(free1Vars[block] == (teacher1Busy == 0));
+
+                // Teacher2 free
+                var teacher2Busy = LinearExpr.Sum(teacher2.Classes.Select(cls => variables.Assignment[cls.Index][dayIndex][block]));
+                free2Vars[block] = context.Model.NewBoolVar($"free_{teacher2Id}_{dayIndex}_{block}");
+                context.Model.Add(free2Vars[block] == (teacher2Busy == 0));
             }
 
-            return penalties;
+            return (free1Vars, free2Vars);
         }
     }
 
