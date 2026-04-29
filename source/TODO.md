@@ -19,13 +19,14 @@
   - [x] Add result comparison for what-if scenarios
 
 ## General Improvements
+- [] Use system diagnostics activity and metrics for OpenTelemetry-compatible diagnostics
 - [ ] Support hybrid schedules (mix of traditional and block periods)
   - [x] Extend SchedulerOptions with DayConfigs (per day blocks, merged blocks)
-  - [ ] Update SchedulingContext to handle variable blocks per day
-  - [ ] Modify decision variables to be jagged array [day][block]
-  - [ ] Update all constraints and optimizations for variable blocks
+  - [x] Update SchedulingContext to handle variable blocks per day
+  - [x] Modify decision variables to be jagged array [day][block]
+  - [x] Update all constraints and optimizations for variable blocks
   - [x] Add validation for day configs
-  - [ ] Update results to handle variable blocks per day
+  - [x] Update results to handle variable blocks per day
 - [x] Break advanced refactorings down into smaller tasks (common planning blocks, partial solving, hybrid schedules)
 - [x] Analyse the project and create TODOs for architectural and maintainability improvements.
   - [x] Add comprehensive unit tests for all builders and validators
