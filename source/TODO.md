@@ -8,7 +8,7 @@
   - [x] Add penalty for common planning blocks (teachers having overlapping free time)
   - [x] Update results to show co-teachers
 - [ ] Support teachers sharing classrooms
-- [ ] Support ordering classrooms by distance/time relative to student hubs, then the distance/time from those hubs to the next hub.
+<!-- - [ ] Support ordering classrooms by distance/time relative to student hubs, then the distance/time from those hubs to the next hub. -->
 
 ## Usability & Operational Features
 - [x] Implement partial/incremental solving and "what-if" scenario support
@@ -27,13 +27,11 @@
   - [x] Add validation for day configs
   - [ ] Update results to handle variable blocks per day
 - [x] Break advanced refactorings down into smaller tasks (common planning blocks, partial solving, hybrid schedules)
-- [x] Rename Stream to ClassStream
 - [x] Analyse the project and create TODOs for architectural and maintainability improvements.
-  - [ ] Add comprehensive unit tests for all builders and validators
-  - [ ] Refactor large methods in OptimizationBuilder into smaller, focused methods
-  - [ ] Add integration tests for end-to-end scheduling scenarios
-  - [ ] Implement dependency injection for better testability
+  - [x] Add comprehensive unit tests for all builders and validators
+  - [x] Refactor large methods in OptimizationBuilder into smaller, focused methods
+  - [x] Add integration tests for end-to-end scheduling scenarios
+  - [x] Implement dependency injection for better testability
   - [ ] Add performance benchmarks for solver times
-  - [ ] Create a configuration schema validation
-  - [ ] Add logging for solver performance metrics
-- [x] Break the README down into smaller files with md links between them.
+  - [x] Create a configuration schema validation
+  - [x] Add logging for solver performance metrics
