@@ -36,6 +36,7 @@ public sealed record SchedulerOptions : IOptions<SchedulerOptions>
     public int StudentRoomTransitionPenalty { get; set; } = 2;
     public int FreeTimePenalty { get; set; } = 1;
     public int MergedBlockConsistencyPenalty { get; set; } = 1;
+    public int CommonPlanningPenalty { get; set; } = 1;
     public double SolverTimeLimitSeconds { get; set; } = 30.0;
     public List<Teacher> Teachers { get; set; } = new();
     public List<Class> Classes { get; set; } = new();

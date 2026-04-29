@@ -2,6 +2,16 @@ using Google.OrTools.Sat;
 
 namespace SchedulePlanner.Core
 {
+    public sealed record SchedulingContext(
+        CpModel Model,
+        IReadOnlyList<ClassAssignment> ClassAssignments,
+        IReadOnlyDictionary<string, TeacherGroup> TeacherGroups,
+        IReadOnlyDictionary<string, IReadOnlyList<ClassAssignment>> RoomGroups,
+        int NumDays,
+        IReadOnlyList<int> BlocksPerDayList);
+
+    public sealed record ScheduleVariables(BoolVar[][][] Assignment);
+
     public interface IConstraintBuilder
     {
         void AddSchedulingRules(
@@ -178,15 +188,15 @@ namespace SchedulePlanner.Core
             CancellationToken cancellationToken)
         {
             var streamedAssignments = context.ClassAssignments
-                .Where(a => a.Stream != null)
+                .Where(a => a.ClassStream != null)
                 .ToList();
 
             for (var i = 0; i < streamedAssignments.Count; ++i)
             {
                 for (var j = i + 1; j < streamedAssignments.Count; ++j)
                 {
-                    var stream1 = streamedAssignments[i].Stream!;
-                    var stream2 = streamedAssignments[j].Stream!;
+                    var stream1 = streamedAssignments[i].ClassStream!;
+                    var stream2 = streamedAssignments[j].ClassStream!;
 
                     // Check if streams have intersecting linked subjects
                     var intersect = stream1.LinkedSubjects.Intersect(stream2.LinkedSubjects, StringComparer.OrdinalIgnoreCase);
@@ -270,30 +280,15 @@ namespace SchedulePlanner.Core
                     var day = config.Days[dayIndex];
                     if (!availableDays.Contains(day))
                     {
-                foreach (var cls in teacherEntry.Classes)
-                {
-                    for (var day = 0; day < context.NumDays; ++day)
-                    {
-                        for (var block = 0; block < Math.Min(context.BlocksPerDayList[day], teacher.NoEarlyBlocksBefore); ++block)
+                        foreach (var cls in teacherEntry.Classes)
                         {
-                            context.Model.Add(variables.Assignment[cls.Index][day][block] == 0);
+                            for (var block = 0; block < Math.Min(context.BlocksPerDayList[dayIndex], teacher.NoEarlyBlocksBefore); ++block)
+                            {
+                                context.Model.Add(variables.Assignment[cls.Index][dayIndex][block] == 0);
+                            }
                         }
                     }
                 }
-                        }
         }
     }
-            }
-        }
-    }
-
-    public sealed record SchedulingContext(
-        CpModel Model,
-        IReadOnlyList<ClassAssignment> ClassAssignments,
-        IReadOnlyDictionary<string, TeacherGroup> TeacherGroups,
-        IReadOnlyDictionary<string, IReadOnlyList<ClassAssignment>> RoomGroups,
-        int NumDays,
-        IReadOnlyList<int> BlocksPerDayList);
-
-    public sealed record ScheduleVariables(BoolVar[][][] Assignment);
 }

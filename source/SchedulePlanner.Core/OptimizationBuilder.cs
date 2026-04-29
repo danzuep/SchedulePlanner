@@ -80,6 +80,13 @@ namespace SchedulePlanner.Core
             SchedulerOptions config,
             int freeTimePenaltyWeight,
             CancellationToken cancellationToken);
+
+        IReadOnlyList<CommonPlanningPenalty> AddCommonPlanningOptimization(
+            SchedulingContext context,
+            ScheduleVariables variables,
+            SchedulerOptions config,
+            int commonPlanningPenaltyWeight,
+            CancellationToken cancellationToken);
     }
 
     public sealed class OptimizationBuilder : IOptimizationBuilder
@@ -348,7 +355,7 @@ namespace SchedulePlanner.Core
         {
             var penalties = new List<StreamFragmentationPenalty>();
 
-            foreach (var classAssignment in context.ClassAssignments.Where(a => a.Stream != null))
+            foreach (var classAssignment in context.ClassAssignments.Where(a => a.ClassStream != null))
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
@@ -363,14 +370,14 @@ namespace SchedulePlanner.Core
                     }
 
                     var penaltyVar = context.Model.NewBoolVar(
-                        $"stream_fragmentation_{classAssignment.Stream!.Id}_block{block}");
+                        $"stream_fragmentation_{classAssignment.ClassStream!.Id}_block{block}");
 
                     context.Model.Add(LinearExpr.Sum(blockAssignments) >= 1).OnlyEnforceIf(penaltyVar);
                     context.Model.Add(LinearExpr.Sum(blockAssignments) < 1).OnlyEnforceIf(penaltyVar.Not());
 
                     penalties.Add(new StreamFragmentationPenalty(
                         penaltyVar,
-                        classAssignment.Stream.Id,
+                        classAssignment.ClassStream.Id,
                         block));
                 }
             }
@@ -460,12 +467,12 @@ namespace SchedulePlanner.Core
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    foreach (var assignment in context.ClassAssignments.Where(a => a.Stream != null))
+                    foreach (var assignment in context.ClassAssignments.Where(a => a.ClassStream != null))
                     {
                         cancellationToken.ThrowIfCancellationRequested();
 
-                        var stream = assignment.Stream!;
-                        var nextAssignments = context.ClassAssignments.Where(a => a.Stream != null && a.Stream!.Id == stream.Id && a != assignment);
+                        var stream = assignment.ClassStream!;
+                        var nextAssignments = context.ClassAssignments.Where(a => a.ClassStream != null && a.ClassStream!.Id == stream.Id && a != assignment);
 
                         foreach (var next in nextAssignments)
                         {
@@ -669,6 +676,93 @@ namespace SchedulePlanner.Core
 
             return penalties;
         }
+
+        public IReadOnlyList<CommonPlanningPenalty> AddCommonPlanningOptimization(
+            SchedulingContext context,
+            ScheduleVariables variables,
+            SchedulerOptions config,
+            int commonPlanningPenaltyWeight,
+            CancellationToken cancellationToken)
+        {
+            var penalties = new List<CommonPlanningPenalty>();
+
+            // Collect unique co-teaching pairs
+            var coTeachingPairs = new HashSet<(string, string)>();
+            foreach (var assignment in context.ClassAssignments)
+            {
+                if (assignment.Teachers.Count > 1)
+                {
+                    var teacherIds = assignment.Teachers.Select(t => t.Id).OrderBy(id => id).ToList();
+                    for (var i = 0; i < teacherIds.Count; ++i)
+                    {
+                        for (var j = i + 1; j < teacherIds.Count; ++j)
+                        {
+                            coTeachingPairs.Add((teacherIds[i], teacherIds[j]));
+                        }
+                    }
+                }
+            }
+
+            foreach (var (teacher1Id, teacher2Id) in coTeachingPairs)
+            {
+                var teacher1 = context.TeacherGroups[teacher1Id];
+                var teacher2 = context.TeacherGroups[teacher2Id];
+
+                for (var dayIndex = 0; dayIndex < context.NumDays; ++dayIndex)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    var day = config.Days[dayIndex];
+
+                    // Create BoolVars for free status
+                    var free1Vars = new BoolVar[context.BlocksPerDayList[dayIndex]];
+                    var free2Vars = new BoolVar[context.BlocksPerDayList[dayIndex]];
+
+                    for (var block = 0; block < context.BlocksPerDayList[dayIndex]; ++block)
+                    {
+                        // Teacher1 free if no class assigned
+                        var teacher1Busy = LinearExpr.Sum(teacher1.Classes.Select(cls => variables.Assignment[cls.Index][dayIndex][block]));
+                        free1Vars[block] = context.Model.NewBoolVar($"free_{teacher1Id}_{dayIndex}_{block}");
+                        context.Model.Add(free1Vars[block] == (teacher1Busy == 0));
+
+                        // Teacher2 free
+                        var teacher2Busy = LinearExpr.Sum(teacher2.Classes.Select(cls => variables.Assignment[cls.Index][dayIndex][block]));
+                        free2Vars[block] = context.Model.NewBoolVar($"free_{teacher2Id}_{dayIndex}_{block}");
+                        context.Model.Add(free2Vars[block] == (teacher2Busy == 0));
+                    }
+
+                    // Both free vars
+                    var bothFreeVars = new BoolVar[context.BlocksPerDayList[dayIndex]];
+                    for (var block = 0; block < context.BlocksPerDayList[dayIndex]; ++block)
+                    {
+                        bothFreeVars[block] = context.Model.NewBoolVar($"both_free_{teacher1Id}_{teacher2Id}_{dayIndex}_{block}");
+                        context.Model.AddBoolAnd([free1Vars[block], free2Vars[block]], bothFreeVars[block]);
+                    }
+
+                    // Has overlapping free
+                    var hasOverlappingFree = context.Model.NewBoolVar($"has_overlapping_free_{teacher1Id}_{teacher2Id}_{dayIndex}");
+                    context.Model.AddBoolOr(bothFreeVars, hasOverlappingFree);
+
+                    // Penalty if no overlapping
+                    var penaltyVar = context.Model.NewBoolVar($"common_planning_penalty_{teacher1Id}_{teacher2Id}_{dayIndex}");
+                    context.Model.Add(penaltyVar == (1 - hasOverlappingFree));
+
+                    penalties.Add(new CommonPlanningPenalty(
+                        penaltyVar,
+                        teacher1Id,
+                        teacher2Id,
+                        day));
+                }
+            }
+
+            // Add to objective
+            if (penalties.Count > 0)
+            {
+                context.Model.Minimize(commonPlanningPenaltyWeight * LinearExpr.Sum(penalties.Select(p => p.Var)));
+            }
+
+            return penalties;
+        }
     }
 
     public sealed record RoomChangePenalty(
@@ -749,4 +843,10 @@ namespace SchedulePlanner.Core
         BoolVar Var,
         string TeacherId,
         int MinFreeBlocks);
+
+    public sealed record CommonPlanningPenalty(
+        BoolVar Var,
+        string Teacher1Id,
+        string Teacher2Id,
+        DayOfWeek Day);
 }

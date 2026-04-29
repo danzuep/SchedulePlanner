@@ -92,13 +92,12 @@ namespace SchedulePlanner.Core
                     {
                         for (var block = 0; block < context.BlocksPerDayList[day]; ++block)
                         {
-                            if (solver.BooleanValue(variables.Assignment[assignment.Index][day][block]))
+                            if (solver.BooleanValue(variables.Assignment[entry.Index][day][block]))
                             {
                                 scheduledBlocks++;
                             }
                         }
                     }
-                        }
                     }
 
                     classSummaries.Add(new ClassScheduleSummary(
@@ -217,9 +216,9 @@ namespace SchedulePlanner.Core
         {
             var streamSchedules = new List<StreamScheduleResult>();
 
-            foreach (var assignment in context.ClassAssignments.Where(a => a.Stream != null))
+            foreach (var assignment in context.ClassAssignments.Where(a => a.ClassStream != null))
             {
-                var stream = assignment.Stream!;
+                var stream = assignment.ClassStream!;
                 var days = new List<DayScheduleResult>();
 
                 for (var day = 0; day < context.NumDays; ++day)

@@ -5,7 +5,7 @@
   - [x] Extend Class model to support multiple teacher IDs (co-teaching)
   - [x] Update ClassAssignmentBuilder to handle multiple teachers per class
   - [x] Add constraints for co-teaching (teachers available at same time)
-  - [ ] Add penalty for common planning blocks (teachers having overlapping free time)
+  - [x] Add penalty for common planning blocks (teachers having overlapping free time)
   - [x] Update results to show co-teachers
 - [ ] Support teachers sharing classrooms
 - [ ] Support ordering classrooms by distance/time relative to student hubs, then the distance/time from those hubs to the next hub.
@@ -27,7 +27,7 @@
   - [x] Add validation for day configs
   - [ ] Update results to handle variable blocks per day
 - [x] Break advanced refactorings down into smaller tasks (common planning blocks, partial solving, hybrid schedules)
-- [ ] Rename Stream to ClassStream
+- [x] Rename Stream to ClassStream
 - [x] Analyse the project and create TODOs for architectural and maintainability improvements.
   - [ ] Add comprehensive unit tests for all builders and validators
   - [ ] Refactor large methods in OptimizationBuilder into smaller, focused methods

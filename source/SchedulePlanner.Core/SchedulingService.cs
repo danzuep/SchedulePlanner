@@ -93,6 +93,7 @@ namespace SchedulePlanner.Core
             var studentRoomTransitionPenalties = _optimizationBuilder.AddStudentRoomTransitionOptimization(context, variables, _config, normalized.StudentRoomTransitionPenalty, cancellationToken);
             var mergedBlockConsistencyPenalties = _optimizationBuilder.AddMergedBlockConsistencyOptimization(context, variables, _config, normalized.MergedBlockConsistencyPenalty, cancellationToken);
             var freeTimePenalties = _optimizationBuilder.AddFreeTimeOptimization(context, variables, _config, normalized.FreeTimePenalty, cancellationToken);
+            var commonPlanningPenalties = _optimizationBuilder.AddCommonPlanningOptimization(context, variables, _config, normalized.CommonPlanningPenalty, cancellationToken);
 
             // Combine all penalties for minimization
             var allPenaltyVars = penalties.Select(x => x.Var)
@@ -106,6 +107,7 @@ namespace SchedulePlanner.Core
                 .Concat(studentRoomTransitionPenalties.Select(x => x.Var))
                 .Concat(mergedBlockConsistencyPenalties.Select(x => x.Var))
                 .Concat(freeTimePenalties.Select(x => x.Var))
+                .Concat(commonPlanningPenalties.Select(x => x.Var))
                 .ToArray();
             var allPenaltyWeights = Enumerable.Repeat(normalized.RoomChangePenalty, penalties.Count)
                 .Concat(Enumerable.Repeat(normalized.ScheduleSpreadPenalty, spreadPenalties.Count))
