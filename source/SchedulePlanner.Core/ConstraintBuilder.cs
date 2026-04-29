@@ -67,10 +67,13 @@ namespace SchedulePlanner.Core
                         continue;
                     }
 
-                    foreach (var entry in context.ClassAssignments)
+                    if (defaultBlock.Index < context.BlocksPerDayList[dayIndex])
                     {
-                        cancellationToken.ThrowIfCancellationRequested();
-                        context.Model.Add(variables.Assignment[entry.Index, dayIndex, defaultBlock.Index] == 0);
+                        foreach (var entry in context.ClassAssignments)
+                        {
+                            cancellationToken.ThrowIfCancellationRequested();
+                            context.Model.Add(variables.Assignment[entry.Index][dayIndex][defaultBlock.Index] == 0);
+                        }
                     }
                 }
             }
@@ -91,14 +94,15 @@ namespace SchedulePlanner.Core
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    for (var block = 0; block < context.BlocksPerDay; ++block)
+                    for (var block = 0; block < context.BlocksPerDayList[day]; ++block)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        allSlots.Add(variables.Assignment[entry.Index, day, block]);
+                        allSlots.Add(variables.Assignment[entry.Index][day][block]);
                     }
                 }
 
-                if (entry.Config.WeeklyBlocks > context.NumDays * context.BlocksPerDay)
+                var totalBlocks = context.BlocksPerDayList.Sum();
+                if (entry.Config.WeeklyBlocks > totalBlocks)
                 {
                     throw new InvalidOperationException(
                         $"Class {entry.Config.Key} demands more blocks than available.");
@@ -121,12 +125,12 @@ namespace SchedulePlanner.Core
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    for (var block = 0; block < context.BlocksPerDay; ++block)
+                    for (var block = 0; block < context.BlocksPerDayList[day]; ++block)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
 
                         var slots = teacherGroup.Classes
-                            .Select(entry => variables.Assignment[entry.Index, day, block])
+                            .Select(entry => variables.Assignment[entry.Index][day][block])
                             .ToList();
 
                         if (slots.Count > 1)
@@ -151,12 +155,12 @@ namespace SchedulePlanner.Core
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    for (var block = 0; block < context.BlocksPerDay; ++block)
+                    for (var block = 0; block < context.BlocksPerDayList[day]; ++block)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
 
                         var slots = roomClasses
-                            .Select(entry => variables.Assignment[entry.Index, day, block])
+                            .Select(entry => variables.Assignment[entry.Index][day][block])
                             .ToList();
 
                         if (slots.Count > 1)
@@ -191,11 +195,11 @@ namespace SchedulePlanner.Core
                         // Prevent overlap
                         for (var day = 0; day < context.NumDays; ++day)
                         {
-                            for (var block = 0; block < context.BlocksPerDay; ++block)
+                            for (var block = 0; block < context.BlocksPerDayList[day]; ++block)
                             {
                                 context.Model.Add(
-                                    variables.Assignment[streamedAssignments[i].Index, day, block] +
-                                    variables.Assignment[streamedAssignments[j].Index, day, block] <= 1);
+                                    variables.Assignment[streamedAssignments[i].Index][day][block] +
+                                    variables.Assignment[streamedAssignments[j].Index][day][block] <= 1);
                             }
                         }
                     }
@@ -223,16 +227,16 @@ namespace SchedulePlanner.Core
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    for (var b = 0; b < context.BlocksPerDay - buffer; ++b)
+                    for (var b = 0; b < context.BlocksPerDayList[day] - buffer; ++b)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
 
                         var assignedAtB = roomClasses
-                            .Select(entry => variables.Assignment[entry.Index, day, b])
+                            .Select(entry => variables.Assignment[entry.Index][day][b])
                             .ToList();
 
                         var assignedAtBPlus = roomClasses
-                            .Select(entry => variables.Assignment[entry.Index, day, b + buffer])
+                            .Select(entry => variables.Assignment[entry.Index][day][b + buffer])
                             .ToList();
 
                         context.Model.Add(LinearExpr.Sum(assignedAtB) + LinearExpr.Sum(assignedAtBPlus) <= 1);
@@ -266,12 +270,16 @@ namespace SchedulePlanner.Core
                     var day = config.Days[dayIndex];
                     if (!availableDays.Contains(day))
                     {
-                        foreach (var cls in teacherEntry.Classes)
+                foreach (var cls in teacherEntry.Classes)
+                {
+                    for (var day = 0; day < context.NumDays; ++day)
+                    {
+                        for (var block = 0; block < Math.Min(context.BlocksPerDayList[day], teacher.NoEarlyBlocksBefore); ++block)
                         {
-                            for (var block = 0; block < context.BlocksPerDay; ++block)
-                            {
-                                context.Model.Add(variables.Assignment[cls.Index, dayIndex, block] == 0);
-                            }
+                            context.Model.Add(variables.Assignment[cls.Index][day][block] == 0);
+                        }
+                    }
+                }
                         }
         }
     }

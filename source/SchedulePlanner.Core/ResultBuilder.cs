@@ -39,11 +39,11 @@ namespace SchedulePlanner.Core
                     {
                         var blocks = new List<BlockScheduleResult>();
 
-                        for (var blockIndex = 0; blockIndex < context.BlocksPerDay; ++blockIndex)
+                    for (var blockIndex = 0; blockIndex < context.BlocksPerDayList[day]; ++blockIndex)
+                    {
+                        if (teacherEntry.Classes.FirstOrDefault(entry =>
+                            solver.BooleanValue(variables.Assignment[entry.Index][day][blockIndex])) is ClassAssignment assigned)
                         {
-                            if (teacherEntry.Classes.FirstOrDefault(entry =>
-                                solver.BooleanValue(variables.Assignment[entry.Index, day, blockIndex])) is ClassAssignment assigned)
-                            {
                                 blocks.Add(new BlockScheduleResult(
                                     blockIndex,
                                     false,
@@ -90,12 +90,14 @@ namespace SchedulePlanner.Core
 
                     for (var day = 0; day < context.NumDays; ++day)
                     {
-                        for (var block = 0; block < context.BlocksPerDay; ++block)
+                        for (var block = 0; block < context.BlocksPerDayList[day]; ++block)
                         {
-                            if (solver.BooleanValue(variables.Assignment[entry.Index, day, block]))
+                            if (solver.BooleanValue(variables.Assignment[assignment.Index][day][block]))
                             {
                                 scheduledBlocks++;
                             }
+                        }
+                    }
                         }
                     }
 
@@ -179,7 +181,7 @@ namespace SchedulePlanner.Core
             CpSolver solver)
         {
             var utilizations = new List<RoomUtilization>();
-            var totalSlots = context.NumDays * context.BlocksPerDay;
+            var totalSlots = context.BlocksPerDayList.Sum();
 
             foreach (var roomGroup in context.RoomGroups)
             {
@@ -190,9 +192,9 @@ namespace SchedulePlanner.Core
                 {
                     for (var day = 0; day < context.NumDays; ++day)
                     {
-                        for (var block = 0; block < context.BlocksPerDay; ++block)
+                        for (var block = 0; block < context.BlocksPerDayList[day]; ++block)
                         {
-                            if (solver.BooleanValue(variables.Assignment[assignment.Index, day, block]))
+                            if (solver.BooleanValue(variables.Assignment[assignment.Index][day][block]))
                             {
                                 assignedSlots++;
                             }
@@ -224,9 +226,9 @@ namespace SchedulePlanner.Core
                 {
                     var blocks = new List<BlockScheduleResult>();
 
-                    for (var blockIndex = 0; blockIndex < context.BlocksPerDay; ++blockIndex)
+                    for (var blockIndex = 0; blockIndex < context.BlocksPerDayList[day]; ++blockIndex)
                     {
-                        if (solver.BooleanValue(variables.Assignment[assignment.Index, day, blockIndex]))
+                        if (solver.BooleanValue(variables.Assignment[assignment.Index][day][blockIndex]))
                         {
                             blocks.Add(new BlockScheduleResult(
                                 blockIndex,

@@ -52,19 +52,11 @@ See **Usage** and **Dependency Injection** sections below for full examples.
 
 ## Configuration
 
-Key properties in `SchedulerOptions`:
+See [Configuration.md](Configuration.md) for detailed configuration options and K-12 specific settings.
 
-| Property                        | Description |
-|---------------------------------|-------------|
-| `Days`                          | List of scheduling days |
-| `BlocksPerDay`                  | Number of time blocks per day |
-| `Teachers`                      | List of teachers (with ID, name, preferred room, departments, target load) |
-| `Classes`                       | List of classes (with Key, name, department, preferred room, WeeklyBlocks) |
-| `PresetBlocks`                  | Fixed non-teaching slots (e.g., lunch) |
-| Penalty weights (`RoomChangePenalty`, `ScheduleSpreadPenalty`, etc.) | Control optimization priorities |
-| `SolverTimeLimitSeconds`        | Maximum solve time |
+## Usage
 
-**Data Models** (Teacher, Class, PresetBlockConfig) are simple POCOs with required validation.
+See [Usage.md](Usage.md) for quick start, advanced usage, result structure, and export options.
 
 ## How It Works
 
@@ -75,35 +67,11 @@ Key properties in `SchedulerOptions`:
 
 Detailed explanations of each penalty and component are available in the full documentation.
 
-## Usage
-
-Basic and DI examples remain as before (see original for code snippets).
-
-Advanced usage: inject custom implementations of any builder interface for domain-specific logic.
-
-## Result Structure
-
-`ScheduleResult` includes:
-- `Status`, `HasSolution`, `ObjectiveValue`
-- `TeacherSchedules` (day → block → class/room details)
-- `Classes` (scheduled vs required blocks per class)
-- `RoomChanges` and solver statistics
-
-## Penalties Explained (Summary)
-
-- **Room Change** — Teacher switching rooms between consecutive blocks
-- **Schedule Spread** — Back-to-back classes (transition time)
-- **Week Distribution** — Uneven daily teaching load
-- **Class Day Clustering** — Multiple sessions of same class on one day
-- **Class Block Consistency** — Same class at different times across days
-
-Weights are configurable; all contribute to a single minimized objective.
-
 ## Technical Details
 
 - Solver: Google OR-Tools CP-SAT
 - .NET 8+ / C# 12
-- Decision variables: 3D boolean array `[class, day, block]`
+- Decision variables: Jagged boolean array `[assignment][day][block]` for variable blocks per day
 - Synchronous core; async wrapper with `CancellationToken`
 
 ## Extensibility
@@ -114,12 +82,14 @@ Implement any of the interfaces (`IConfigValidator`, `IClassAssignmentBuilder`, 
 
 Throws clear `InvalidOperationException` for configuration issues (missing data, over-assignment, negative penalties, etc.). Negative values are clamped with warnings.
 
+---
+
 ## Completed K-12 Enhancements
 
 The following K-12 features have been implemented:
 
 ### Core K-12 Support
-- ✅ Add `Stream` model with size, proficiency level, and linked subjects
+- ✅ Add `ClassStream` model with size, proficiency level, and linked subjects
 - ✅ Extend `Class` to support multiple streams
 - ✅ Update assignment logic for streams
 - ✅ Add constraints for stream conflicts
@@ -138,9 +108,9 @@ The following K-12 features have been implemented:
 - ✅ Add shared room change penalty
 
 ### Teacher & Workload Enhancements
-- ✅ Extend `Teacher` with availability, part-time, certifications, max consecutive
+- ✅ Extend `Teacher` model with availability, part-time, certifications, max consecutive
 - ✅ Add target load adherence penalty
-- ✅ Add early block restrictions
+- ✅ Add granular teacher preferences including early block restrictions
 
 ### Usability & Operational Features
 - ✅ Add iCal and CSV export options
@@ -157,35 +127,7 @@ The following K-12 features have been implemented:
 - ✅ Improve ScheduleLogger with statistics
 - ✅ Document samples and templates
 
-See TODO.md for remaining enhancements.
-
-- ✅ Move TODOs into a separate checklist file
-
-
-
-## Sample Extensions and Starter Templates
-
-### Using Streams for Ability Grouping
-
-```csharp
-var options = new SchedulerOptions
-{
-    Classes = new List<Class>
-    {
-        new Class
-        {
-            Key = "Math101",
-            Department = "Math",
-            Streams = new List<Stream>
-            {
-                new Stream { Id = "Math101-Advanced", Size = 15, ProficiencyLevel = "Advanced", LinkedSubjects = new[] { "Math" } },
-                new Stream { Id = "Math101-Basic", Size = 20, ProficiencyLevel = "Basic", LinkedSubjects = new[] { "Math" } }
-            }
-        }
-    },
-    Streams = new List<Stream> { /* global streams */ }
-};
-```
+See [TODO.md](../TODO.md) for remaining enhancements.
 
 ### Configuring Shared Rooms with Buffers
 

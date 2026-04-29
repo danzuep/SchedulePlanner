@@ -51,10 +51,10 @@ namespace SchedulePlanner.Core.Tests
                     Department = "Math",
                     PreferredRoom = "Room1",
                     WeeklyBlocks = 4,
-                    Streams = new List<Stream>
+                    Streams = new List<ClassStream>
                     {
-                        new Stream { Id = "Math101-Advanced", Size = 15, ProficiencyLevel = "Advanced", LinkedSubjects = new[] { "Math" } },
-                        new Stream { Id = "Math101-Basic", Size = 20, ProficiencyLevel = "Basic", LinkedSubjects = new[] { "Math" } }
+                        new ClassStream { Id = "Math101-Advanced", Size = 15, ProficiencyLevel = "Advanced", LinkedSubjects = new[] { "Math" } },
+                        new ClassStream { Id = "Math101-Basic", Size = 20, ProficiencyLevel = "Basic", LinkedSubjects = new[] { "Math" } }
                     }
                 },
                 new Class
@@ -64,20 +64,20 @@ namespace SchedulePlanner.Core.Tests
                     Department = "English",
                     PreferredRoom = "Room2",
                     WeeklyBlocks = 3,
-                    Streams = new List<Stream>
+                    Streams = new List<ClassStream>
                     {
-                        new Stream { Id = "Eng201-Advanced", Size = 12, ProficiencyLevel = "Advanced", LinkedSubjects = new[] { "English" } },
-                        new Stream { Id = "Eng201-Basic", Size = 18, ProficiencyLevel = "Basic", LinkedSubjects = new[] { "English" } }
+                        new ClassStream { Id = "Eng201-Advanced", Size = 12, ProficiencyLevel = "Advanced", LinkedSubjects = new[] { "English" } },
+                        new ClassStream { Id = "Eng201-Basic", Size = 18, ProficiencyLevel = "Basic", LinkedSubjects = new[] { "English" } }
                     }
                 }
             };
 
-            var streams = new List<Stream>
+            var streams = new List<ClassStream>
             {
-                new Stream { Id = "Math101-Advanced", Size = 15, ProficiencyLevel = "Advanced", LinkedSubjects = new[] { "Math" } },
-                new Stream { Id = "Math101-Basic", Size = 20, ProficiencyLevel = "Basic", LinkedSubjects = new[] { "Math" } },
-                new Stream { Id = "Eng201-Advanced", Size = 12, ProficiencyLevel = "Advanced", LinkedSubjects = new[] { "English" } },
-                new Stream { Id = "Eng201-Basic", Size = 18, ProficiencyLevel = "Basic", LinkedSubjects = new[] { "English" } }
+                new ClassStream { Id = "Math101-Advanced", Size = 15, ProficiencyLevel = "Advanced", LinkedSubjects = new[] { "Math" } },
+                new ClassStream { Id = "Math101-Basic", Size = 20, ProficiencyLevel = "Basic", LinkedSubjects = new[] { "Math" } },
+                new ClassStream { Id = "Eng201-Advanced", Size = 12, ProficiencyLevel = "Advanced", LinkedSubjects = new[] { "English" } },
+                new ClassStream { Id = "Eng201-Basic", Size = 18, ProficiencyLevel = "Basic", LinkedSubjects = new[] { "English" } }
             };
 
             var rooms = new List<Room>

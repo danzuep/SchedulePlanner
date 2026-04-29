@@ -145,7 +145,7 @@ namespace SchedulePlanner.Core
         }
     }
 
-    public sealed record ClassAssignment(Class Config, IReadOnlyList<Teacher> Teachers, int Index, string Room, Stream? Stream);
+    public sealed record ClassAssignment(Class Config, IReadOnlyList<Teacher> Teachers, int Index, string Room, ClassStream? Stream);
 
     public sealed record TeacherGroup(Teacher Teacher, IReadOnlyList<ClassAssignment> Classes);
 }

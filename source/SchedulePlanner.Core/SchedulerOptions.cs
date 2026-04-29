@@ -39,7 +39,7 @@ public sealed record SchedulerOptions : IOptions<SchedulerOptions>
     public double SolverTimeLimitSeconds { get; set; } = 30.0;
     public List<Teacher> Teachers { get; set; } = new();
     public List<Class> Classes { get; set; } = new();
-    public List<Stream> Streams { get; set; } = new();
+    public List<ClassStream> Streams { get; set; } = new();
     public List<Room> Rooms { get; set; } = new();
     public List<PreAssignedSlot> PreAssignedSlots { get; set; } = new();
     public ScheduleResult? PreviousScheduleResult { get; set; }
@@ -117,11 +117,11 @@ public sealed record Class
     public string Name { get; set; } = string.Empty;
     public string PreferredRoom { get; set; } = string.Empty;
     public int WeeklyBlocks { get; set; } = 4;
-    public List<Stream> Streams { get; set; } = new();
+    public List<ClassStream> Streams { get; set; } = new();
     public List<string> TeacherIds { get; set; } = new();
 }
 
-public sealed record Stream
+public sealed record ClassStream
 {
     public string Id { get; set; } = string.Empty;
     public int Size { get; set; }

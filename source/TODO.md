@@ -28,5 +28,12 @@
   - [ ] Update results to handle variable blocks per day
 - [x] Break advanced refactorings down into smaller tasks (common planning blocks, partial solving, hybrid schedules)
 - [ ] Rename Stream to ClassStream
-- [ ] Analyse the project and create TODOs for architectural and maintainability improvements.
-- [ ] Break the README down into smaller files with md links between them.
+- [x] Analyse the project and create TODOs for architectural and maintainability improvements.
+  - [ ] Add comprehensive unit tests for all builders and validators
+  - [ ] Refactor large methods in OptimizationBuilder into smaller, focused methods
+  - [ ] Add integration tests for end-to-end scheduling scenarios
+  - [ ] Implement dependency injection for better testability
+  - [ ] Add performance benchmarks for solver times
+  - [ ] Create a configuration schema validation
+  - [ ] Add logging for solver performance metrics
+- [x] Break the README down into smaller files with md links between them.

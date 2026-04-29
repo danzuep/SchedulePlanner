@@ -97,7 +97,7 @@ namespace SchedulePlanner.Core
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                for (var block = 0; block < context.BlocksPerDay - 1; ++block)
+                for (var block = 0; block < context.BlocksPerDayList[day] - 1; ++block)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
@@ -124,12 +124,12 @@ namespace SchedulePlanner.Core
                                 var penaltyVar = context.Model.NewBoolVar(
                                     $"room_change_{teacherId}_day{day}_block{block}_{current.Config.Key}_{next.Config.Key}");
 
-                                context.Model.Add(penaltyVar <= variables.Assignment[current.Index, day, block]);
-                                context.Model.Add(penaltyVar <= variables.Assignment[next.Index, day, block + 1]);
+                                context.Model.Add(penaltyVar <= variables.Assignment[current.Index][day][block]);
+                                context.Model.Add(penaltyVar <= variables.Assignment[next.Index][day][block + 1]);
                                 context.Model.Add(
-                                    penaltyVar >= variables.Assignment[current.Index, day, block]
-                                                + variables.Assignment[next.Index, day, block + 1]
-                                                - 1);
+                                    penaltyVar >= variables.Assignment[current.Index][day][block]
+                                                 + variables.Assignment[next.Index][day][block + 1]
+                                                 - 1);
 
                                 penalties.Add(new RoomChangePenalty(
                                     penaltyVar,
@@ -162,7 +162,7 @@ namespace SchedulePlanner.Core
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                for (var block = 0; block < context.BlocksPerDay - 1; ++block)
+                for (var block = 0; block < context.BlocksPerDayList[day] - 1; ++block)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
@@ -189,11 +189,11 @@ namespace SchedulePlanner.Core
                                 var penaltyVar = context.Model.NewBoolVar(
                                     $"schedule_spread_{teacherId}_day{day}_block{block}_{current.Config.Key}_{next.Config.Key}");
 
-                                context.Model.Add(penaltyVar <= variables.Assignment[current.Index, day, block]);
-                                context.Model.Add(penaltyVar <= variables.Assignment[next.Index, day, block + 1]);
+                                context.Model.Add(penaltyVar <= variables.Assignment[current.Index][day][block]);
+                                context.Model.Add(penaltyVar <= variables.Assignment[next.Index][day][block + 1]);
                                 context.Model.Add(
-                                    penaltyVar >= variables.Assignment[current.Index, day, block]
-                                                 + variables.Assignment[next.Index, day, block + 1]
+                                    penaltyVar >= variables.Assignment[current.Index][day][block]
+                                                 + variables.Assignment[next.Index][day][block + 1]
                                                  - 1);
 
                                 penalties.Add(new ScheduleSpreadPenalty(
