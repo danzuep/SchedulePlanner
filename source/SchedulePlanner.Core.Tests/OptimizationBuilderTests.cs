@@ -410,5 +410,72 @@ namespace SchedulePlanner.Core.Tests
             await Assert.That(penalties).IsNotNull();
             await Assert.That(penalties.Count).IsGreaterThan(0);
         }
+
+        [Test]
+        public async Task AddCommonPlanningOptimization_CoTeachingClasses_ReturnsPenalties()
+        {
+            var config = new SchedulerOptions
+            {
+                Days = new[] { DayOfWeek.Monday },
+                BlocksPerDay = 3,
+                Classes = new List<Class>
+                {
+                    new Class { Key = "Math101", Department = "Math", WeeklyBlocks = 2, Streams = new List<ClassStream> { new ClassStream { Id = "S1", Size = 20 } } },
+                    new Class { Key = "Math102", Department = "Math", WeeklyBlocks = 2, Streams = new List<ClassStream> { new ClassStream { Id = "S1", Size = 20 } } }
+                },
+                Teachers = new List<Teacher>
+                {
+                    new Teacher { Id = "T1", FullName = "Teacher 1" },
+                    new Teacher { Id = "T2", FullName = "Teacher 2" }
+                },
+                TeacherDepartments = new List<TeacherDepartment>
+                {
+                    new TeacherDepartment { TeacherId = "T1", Department = "Math" },
+                    new TeacherDepartment { TeacherId = "T2", Department = "Math" }
+                },
+                Streams = new List<ClassStream>
+                {
+                    new ClassStream { Id = "S1", Size = 20 }
+                }
+            };
+
+            var classAssignmentBuilder = new ClassAssignmentBuilder();
+            var classAssignments = classAssignmentBuilder.BuildClassAssignments(config);
+            var teacherGroups = classAssignmentBuilder.BuildTeacherGroups(classAssignments);
+            var roomGroups = classAssignmentBuilder.BuildRoomGroups(classAssignments);
+
+            var blocksPerDayList = new int[config.Days.Count].Select(_ => config.BlocksPerDay).ToList();
+            var context = new SchedulingContext(
+                new CpModel(),
+                classAssignments,
+                teacherGroups,
+                roomGroups,
+                config.Days.Count,
+                blocksPerDayList);
+
+            var assignment = new BoolVar[classAssignments.Count][][];
+            for (var cls = 0; cls < classAssignments.Count; ++cls)
+            {
+                assignment[cls] = new BoolVar[config.Days.Count][];
+                for (var day = 0; day < config.Days.Count; ++day)
+                {
+                    assignment[cls][day] = new BoolVar[blocksPerDayList[day]];
+                    for (var block = 0; block < blocksPerDayList[day]; ++block)
+                    {
+                        assignment[cls][day][block] = context.Model.NewBoolVar(
+                            $"assign_{classAssignments[cls].Config.Key}_day{day}_block{block}");
+                    }
+                }
+            }
+
+            var variables = new ScheduleVariables(assignment);
+            var optimizationBuilder = new OptimizationBuilder();
+
+            var penalties = optimizationBuilder.AddCommonPlanningOptimization(
+                context, variables, config, 1, CancellationToken.None);
+
+            await Assert.That(penalties).IsNotNull();
+            await Assert.That(penalties.Count).IsGreaterThan(0);
+        }
     }
 }
