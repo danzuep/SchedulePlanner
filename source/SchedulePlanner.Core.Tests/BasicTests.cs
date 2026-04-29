@@ -95,5 +95,33 @@ namespace SchedulePlanner.Core.Tests
 
             Assert.That(result.HasSolution, Is.True);
         }
+
+        [Test]
+        public async Task PerformanceBenchmark_BasicScenario()
+        {
+            var options = SyntheticDataFactory.GenerateBasicScenario();
+            var service = new SchedulingService(options);
+
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            var result = await service.RunAsync();
+            stopwatch.Stop();
+
+            Assert.That(result.HasSolution, Is.True);
+            Console.WriteLine($"Basic scenario solved in {stopwatch.ElapsedMilliseconds} ms");
+        }
+
+        [Test]
+        public async Task PerformanceBenchmark_LargeK12School()
+        {
+            var options = SyntheticDataFactory.GenerateLargeK12School();
+            var service = new SchedulingService(options);
+
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            var result = await service.RunAsync();
+            stopwatch.Stop();
+
+            Assert.That(result.HasSolution, Is.True);
+            Console.WriteLine($"Large K12 school solved in {stopwatch.ElapsedMilliseconds} ms");
+        }
     }
 }

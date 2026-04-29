@@ -32,6 +32,6 @@
   - [x] Refactor large methods in OptimizationBuilder into smaller, focused methods
   - [x] Add integration tests for end-to-end scheduling scenarios
   - [x] Implement dependency injection for better testability
-  - [ ] Add performance benchmarks for solver times
+  - [x] Add performance benchmarks for solver times
   - [x] Create a configuration schema validation
   - [x] Add logging for solver performance metrics
