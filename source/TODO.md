@@ -7,7 +7,7 @@
   - [x] Add constraints for co-teaching (teachers available at same time)
   - [x] Add penalty for common planning blocks (teachers having overlapping free time)
   - [x] Update results to show co-teachers
-- [ ] Support teachers sharing classrooms
+- [x] Support teachers sharing classrooms
 <!-- - [ ] Support ordering classrooms by distance/time relative to student hubs, then the distance/time from those hubs to the next hub. -->
 
 ## Usability & Operational Features

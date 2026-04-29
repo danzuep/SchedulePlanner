@@ -31,7 +31,10 @@ namespace SchedulePlanner.Core
         {
             RequireEachClassToBeScheduledForItsWeeklyBlocks(context, variables, cancellationToken);
             PreventTeachersFromBeingDoubleBooked(context, variables, cancellationToken);
-            PreventRoomsFromBeingDoubleBooked(context, variables, cancellationToken);
+            if (!config.AllowRoomSharing)
+            {
+                PreventRoomsFromBeingDoubleBooked(context, variables, cancellationToken);
+            }
             PreventSchedulingInDefaultBlocks(context, variables, config, cancellationToken);
             PreventStreamConflicts(context, variables, cancellationToken);
             PreventRoomBufferConflicts(context, variables, config, cancellationToken);
