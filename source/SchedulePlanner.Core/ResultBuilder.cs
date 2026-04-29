@@ -1,4 +1,5 @@
 using Google.OrTools.Sat;
+using System.Linq;
 
 namespace SchedulePlanner.Core
 {
