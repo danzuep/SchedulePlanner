@@ -2,16 +2,6 @@ using Google.OrTools.Sat;
 
 namespace SchedulePlanner.Core
 {
-    public sealed record SchedulingContext(
-        CpModel Model,
-        IReadOnlyList<ClassAssignment> ClassAssignments,
-        IReadOnlyDictionary<string, TeacherGroup> TeacherGroups,
-        IReadOnlyDictionary<string, IReadOnlyList<ClassAssignment>> RoomGroups,
-        int NumDays,
-        IReadOnlyList<int> BlocksPerDayList);
-
-    public sealed record ScheduleVariables(BoolVar[][][] Assignment);
-
     public interface IConstraintBuilder
     {
         void AddSchedulingRules(
@@ -55,11 +45,6 @@ namespace SchedulePlanner.Core
             foreach (var defaultBlock in config.PresetBlocks)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-
-                if (defaultBlock.Index < 0 || defaultBlock.Index >= context.BlocksPerDay)
-                {
-                    continue;
-                }
 
                 foreach (var day in defaultBlock.Days)
                 {
@@ -292,6 +277,7 @@ namespace SchedulePlanner.Core
                         }
                     }
                 }
+            }
         }
     }
 }

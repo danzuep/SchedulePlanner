@@ -242,14 +242,17 @@ namespace SchedulePlanner.Core
                     var sumDayD = new List<LinearExpr>();
                     var sumDayD1 = new List<LinearExpr>();
 
-                    foreach (var cls in classes)
-                    {
-                        for (var block = 0; block < context.BlocksPerDay; ++block)
-                        {
-                            sumDayD.Add(variables.Assignment[cls.Index, d, block]);
-                            sumDayD1.Add(variables.Assignment[cls.Index, d + 1, block]);
-                        }
-                    }
+                     foreach (var cls in classes)
+                     {
+                         for (var block = 0; block < context.BlocksPerDayList[d]; ++block)
+                         {
+                             sumDayD.Add(variables.Assignment[cls.Index][d][block]);
+                         }
+                         for (var block = 0; block < context.BlocksPerDayList[d + 1]; ++block)
+                         {
+                             sumDayD1.Add(variables.Assignment[cls.Index][d + 1][block]);
+                         }
+                     }
 
                     var penaltyVar = context.Model.NewBoolVar(
                         $"week_distribution_{teacherId}_day{d}_to_day{d + 1}");
@@ -286,9 +289,9 @@ namespace SchedulePlanner.Core
                     cancellationToken.ThrowIfCancellationRequested();
 
                     var daySlots = new List<LinearExpr>();
-                    for (var block = 0; block < context.BlocksPerDay; ++block)
+                    for (var block = 0; block < context.BlocksPerDayList[day]; ++block)
                     {
-                        daySlots.Add(variables.Assignment[classAssignment.Index, day, block]);
+                        daySlots.Add(variables.Assignment[classAssignment.Index][day][block]);
                     }
 
                     var penaltyVar = context.Model.NewBoolVar(
@@ -320,14 +323,18 @@ namespace SchedulePlanner.Core
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                for (var block = 0; block < context.BlocksPerDay; ++block)
+                int maxBlocks = context.BlocksPerDayList.Max();
+                for (var block = 0; block < maxBlocks; ++block)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
                     var blockAssignments = new List<LinearExpr>();
                     for (var day = 0; day < context.NumDays; ++day)
                     {
-                        blockAssignments.Add(variables.Assignment[classAssignment.Index, day, block]);
+                        if (block < context.BlocksPerDayList[day])
+                        {
+                            blockAssignments.Add(variables.Assignment[classAssignment.Index][day][block]);
+                        }
                     }
 
                     var penaltyVar = context.Model.NewBoolVar(
@@ -355,32 +362,36 @@ namespace SchedulePlanner.Core
         {
             var penalties = new List<StreamFragmentationPenalty>();
 
-            foreach (var classAssignment in context.ClassAssignments.Where(a => a.ClassStream != null))
-            {
-                cancellationToken.ThrowIfCancellationRequested();
+             foreach (var classAssignment in context.ClassAssignments.Where(a => a.ClassStream != null))
+             {
+                 cancellationToken.ThrowIfCancellationRequested();
 
-                for (var block = 0; block < context.BlocksPerDay; ++block)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
+                 int maxBlocks = context.BlocksPerDayList.Max();
+                 for (var block = 0; block < maxBlocks; ++block)
+                 {
+                     cancellationToken.ThrowIfCancellationRequested();
 
-                    var blockAssignments = new List<LinearExpr>();
-                    for (var day = 0; day < context.NumDays; ++day)
-                    {
-                        blockAssignments.Add(variables.Assignment[classAssignment.Index, day, block]);
-                    }
+                     var blockAssignments = new List<LinearExpr>();
+                     for (var day = 0; day < context.NumDays; ++day)
+                     {
+                         if (block < context.BlocksPerDayList[day])
+                         {
+                             blockAssignments.Add(variables.Assignment[classAssignment.Index][day][block]);
+                         }
+                     }
 
-                    var penaltyVar = context.Model.NewBoolVar(
-                        $"stream_fragmentation_{classAssignment.ClassStream!.Id}_block{block}");
+                     var penaltyVar = context.Model.NewBoolVar(
+                         $"stream_fragmentation_{classAssignment.ClassStream!.Id}_block{block}");
 
-                    context.Model.Add(LinearExpr.Sum(blockAssignments) >= 1).OnlyEnforceIf(penaltyVar);
-                    context.Model.Add(LinearExpr.Sum(blockAssignments) < 1).OnlyEnforceIf(penaltyVar.Not());
+                     context.Model.Add(LinearExpr.Sum(blockAssignments) >= 1).OnlyEnforceIf(penaltyVar);
+                     context.Model.Add(LinearExpr.Sum(blockAssignments) < 1).OnlyEnforceIf(penaltyVar.Not());
 
-                    penalties.Add(new StreamFragmentationPenalty(
-                        penaltyVar,
-                        classAssignment.ClassStream.Id,
-                        block));
-                }
-            }
+                     penalties.Add(new StreamFragmentationPenalty(
+                         penaltyVar,
+                         classAssignment.ClassStream.Id,
+                         block));
+                 }
+             }
 
             return penalties;
         }
@@ -398,7 +409,7 @@ namespace SchedulePlanner.Core
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                for (var block = 0; block < context.BlocksPerDay - 1; ++block)
+                for (var block = 0; block < context.BlocksPerDayList[day] - 1; ++block)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
@@ -425,12 +436,12 @@ namespace SchedulePlanner.Core
                                 var penaltyVar = context.Model.NewBoolVar(
                                     $"shared_room_change_{teacherId}_day{day}_block{block}_{current.Config.Key}_{next.Config.Key}");
 
-                                context.Model.Add(penaltyVar <= variables.Assignment[current.Index, day, block]);
-                                context.Model.Add(penaltyVar <= variables.Assignment[next.Index, day, block + 1]);
+                                context.Model.Add(penaltyVar <= variables.Assignment[current.Index][day][block]);
+                                context.Model.Add(penaltyVar <= variables.Assignment[next.Index][day][block + 1]);
                                 context.Model.Add(
-                                    penaltyVar >= variables.Assignment[current.Index, day, block]
-                                                 + variables.Assignment[next.Index, day, block + 1]
-                                                 - 1);
+                                    penaltyVar >= variables.Assignment[current.Index][day][block]
+                                                     + variables.Assignment[next.Index][day][block + 1]
+                                                     - 1);
 
                                 penalties.Add(new SharedRoomChangePenalty(
                                     penaltyVar,
@@ -459,22 +470,21 @@ namespace SchedulePlanner.Core
         {
             var penalties = new List<StudentRoomTransitionPenalty>();
 
-            for (var day = 0; day < context.NumDays; ++day)
+            foreach (var assignment in context.ClassAssignments.Where(a => a.ClassStream != null))
             {
-                cancellationToken.ThrowIfCancellationRequested();
+                var stream = assignment.ClassStream!;
+                var otherAssignments = context.ClassAssignments.Where(a => a.ClassStream != null && a.ClassStream!.Id == stream.Id && a != assignment).ToList();
 
-                for (var block = 0; block < context.BlocksPerDay - 1; ++block)
+                for (var day = 0; day < context.NumDays; ++day)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    foreach (var assignment in context.ClassAssignments.Where(a => a.ClassStream != null))
+                    int dayBlocks = context.BlocksPerDayList[day];
+                    for (var block = 0; block < dayBlocks - 1; ++block)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
 
-                        var stream = assignment.ClassStream!;
-                        var nextAssignments = context.ClassAssignments.Where(a => a.ClassStream != null && a.ClassStream!.Id == stream.Id && a != assignment);
-
-                        foreach (var next in nextAssignments)
+                        foreach (var next in otherAssignments)
                         {
                             if (assignment.Room == next.Room)
                             {
@@ -484,12 +494,12 @@ namespace SchedulePlanner.Core
                             var penaltyVar = context.Model.NewBoolVar(
                                 $"student_room_transition_{stream.Id}_day{day}_block{block}_{assignment.Config.Key}_{next.Config.Key}");
 
-                            context.Model.Add(penaltyVar <= variables.Assignment[assignment.Index, day, block]);
-                            context.Model.Add(penaltyVar <= variables.Assignment[next.Index, day, block + 1]);
+                            context.Model.Add(penaltyVar <= variables.Assignment[assignment.Index][day][block]);
+                            context.Model.Add(penaltyVar <= variables.Assignment[next.Index][day][block + 1]);
                             context.Model.Add(
-                                penaltyVar >= variables.Assignment[assignment.Index, day, block]
-                                             + variables.Assignment[next.Index, day, block + 1]
-                                             - 1);
+                                penaltyVar >= variables.Assignment[assignment.Index][day][block]
+                                                 + variables.Assignment[next.Index][day][block + 1]
+                                                 - 1);
 
                             penalties.Add(new StudentRoomTransitionPenalty(
                                 penaltyVar,
@@ -541,12 +551,12 @@ namespace SchedulePlanner.Core
                                 var penaltyVar = context.Model.NewBoolVar(
                                     $"merged_consistency_{assignment.Index}_{otherAssignment.Index}_day{day}_block{currentBlock}_to_{nextBlock}");
 
-                                context.Model.Add(penaltyVar <= variables.Assignment[assignment.Index, day, currentBlock]);
-                                context.Model.Add(penaltyVar <= variables.Assignment[otherAssignment.Index, day, nextBlock]);
+                                context.Model.Add(penaltyVar <= variables.Assignment[assignment.Index][day][currentBlock]);
+                                context.Model.Add(penaltyVar <= variables.Assignment[otherAssignment.Index][day][nextBlock]);
                                 context.Model.Add(
-                                    penaltyVar >= variables.Assignment[assignment.Index, day, currentBlock]
-                                                 + variables.Assignment[otherAssignment.Index, day, nextBlock]
-                                                 - 1);
+                                    penaltyVar >= variables.Assignment[assignment.Index][day][currentBlock]
+                                                     + variables.Assignment[otherAssignment.Index][day][nextBlock]
+                                                     - 1);
 
                                 penalties.Add(new MergedBlockConsistencyPenalty(
                                     penaltyVar,
@@ -639,9 +649,9 @@ namespace SchedulePlanner.Core
                 {
                     for (var day = 0; day < context.NumDays; ++day)
                     {
-                        for (var block = 0; block < context.BlocksPerDay; ++block)
+                        for (var block = 0; block < context.BlocksPerDayList[day]; ++block)
                         {
-                            totalBlocks.Add(variables.Assignment[cls.Index, day, block]);
+                            totalBlocks.Add(variables.Assignment[cls.Index][day][block]);
                         }
                     }
                 }
@@ -749,12 +759,12 @@ namespace SchedulePlanner.Core
             for (var block = 0; block < context.BlocksPerDayList[dayIndex]; ++block)
             {
                 bothFreeVars[block] = context.Model.NewBoolVar($"both_free_{teacher1Id}_{teacher2Id}_{dayIndex}_{block}");
-                context.Model.AddBoolAnd([free1Vars[block], free2Vars[block]], bothFreeVars[block]);
+                context.Model.AddMinEquality(bothFreeVars[block], new[] { free1Vars[block], free2Vars[block] });
             }
 
             // Has overlapping free
             var hasOverlappingFree = context.Model.NewBoolVar($"has_overlapping_free_{teacher1Id}_{teacher2Id}_{dayIndex}");
-            context.Model.AddBoolOr(bothFreeVars, hasOverlappingFree);
+            context.Model.AddMaxEquality(hasOverlappingFree, bothFreeVars);
 
             // Penalty if no overlapping
             var penaltyVar = context.Model.NewBoolVar($"common_planning_penalty_{teacher1Id}_{teacher2Id}_{dayIndex}");
@@ -780,12 +790,14 @@ namespace SchedulePlanner.Core
                 // Teacher1 free if no class assigned
                 var teacher1Busy = LinearExpr.Sum(teacher1.Classes.Select(cls => variables.Assignment[cls.Index][dayIndex][block]));
                 free1Vars[block] = context.Model.NewBoolVar($"free_{teacher1Id}_{dayIndex}_{block}");
-                context.Model.Add(free1Vars[block] == (teacher1Busy == 0));
+                context.Model.Add(teacher1Busy == 0).OnlyEnforceIf(free1Vars[block]);
+                context.Model.Add(teacher1Busy >= 1).OnlyEnforceIf(free1Vars[block].Not());
 
                 // Teacher2 free
                 var teacher2Busy = LinearExpr.Sum(teacher2.Classes.Select(cls => variables.Assignment[cls.Index][dayIndex][block]));
                 free2Vars[block] = context.Model.NewBoolVar($"free_{teacher2Id}_{dayIndex}_{block}");
-                context.Model.Add(free2Vars[block] == (teacher2Busy == 0));
+                context.Model.Add(teacher2Busy == 0).OnlyEnforceIf(free2Vars[block]);
+                context.Model.Add(teacher2Busy >= 1).OnlyEnforceIf(free2Vars[block].Not());
             }
 
             return (free1Vars, free2Vars);

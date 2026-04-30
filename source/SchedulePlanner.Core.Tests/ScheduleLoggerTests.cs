@@ -9,7 +9,7 @@ namespace SchedulePlanner.Core.Tests
                 "Unknown",
                 false,
                 null,
-                "Solver statistics",
+                new List<SummaryItem> { new SummaryItem("SolverStatus", "Solver statistics") },
                 new List<TeacherScheduleResult>(),
                 new List<ClassScheduleSummary>(),
                 new List<RoomChangeResult>());
@@ -51,7 +51,7 @@ namespace SchedulePlanner.Core.Tests
                 "Optimal",
                 true,
                 0.0,
-                "Solver statistics",
+                new List<SummaryItem> { new SummaryItem("SolverStatus", "Solver statistics") },
                 teacherSchedules,
                 classSummaries,
                 new List<RoomChangeResult>());
@@ -93,7 +93,7 @@ namespace SchedulePlanner.Core.Tests
                 "Optimal",
                 true,
                 3.0,
-                "Solver statistics",
+                new List<SummaryItem> { new SummaryItem("SolverStatus", "Solver statistics") },
                 teacherSchedules,
                 new List<ClassScheduleSummary>(),
                 roomChanges);

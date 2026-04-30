@@ -129,6 +129,16 @@ The following K-12 features have been implemented:
 
 See [TODO.md](../TODO.md) for remaining enhancements.
 
+### Additional Completed Features
+
+- **Block Period Enhancements**: Support for common teacher planning blocks and team co-teaching, including extending the Class model for multiple teacher IDs, updating ClassAssignmentBuilder for multiple teachers, adding co-teaching constraints, common planning block penalties, and updating results to show co-teachers. Also, support for teachers sharing classrooms.
+
+- **Usability & Operational Features**: Implementation of partial/incremental solving and "what-if" scenario support, including adding PreAssignedSlots to SchedulerOptions, modifying SchedulingService to fix pre-assigned variables, incremental solving with previous solution adjustments, what-if support with option cloning and partial reuse, and result comparison for scenarios.
+
+- **General Improvements**: Breaking down advanced refactorings into smaller tasks, analyzing the project for architectural improvements including adding comprehensive unit tests for builders and validators, refactoring large methods in OptimizationBuilder, adding integration tests for end-to-end scenarios, implementing dependency injection for better testability, adding performance benchmarks, creating configuration schema validation, and adding logging for solver performance metrics.
+
+- **Hybrid Schedules (Partial Completion)**: Extended SchedulerOptions with DayConfigs for per day blocks and merged blocks, updated SchedulingContext to handle variable blocks per day, modified decision variables to jagged array [day][block], updated all constraints and optimizations for variable blocks, added validation for day configs, and updated results to handle variable blocks per day.
+
 ### Configuring Shared Rooms with Buffers
 
 ```csharp

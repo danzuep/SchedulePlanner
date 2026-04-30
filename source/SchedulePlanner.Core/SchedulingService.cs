@@ -2,6 +2,8 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using System.Diagnostics;
+using System.Linq;
 
 namespace SchedulePlanner.Core
 {
@@ -59,15 +61,16 @@ namespace SchedulePlanner.Core
 
             var context = BuildSchedulingContext(cancellationToken);
             var variables = CreateDecisionVariables(context, cancellationToken);
+            var stopwatch = Stopwatch.StartNew();
 
             // Fix pre-assigned slots
             foreach (var slot in _config.PreAssignedSlots)
             {
                 if (slot.AssignmentIndex >= 0 && slot.AssignmentIndex < context.ClassAssignments.Count &&
                     slot.Day >= 0 && slot.Day < context.NumDays &&
-                    slot.Block >= 0 && slot.Block < context.BlocksPerDay)
+                    slot.Block >= 0 && slot.Block < context.BlocksPerDayList[slot.Day])
                 {
-                    context.Model.Add(variables.Assignment[slot.AssignmentIndex, slot.Day, slot.Block] == 1);
+                    context.Model.Add(variables.Assignment[slot.AssignmentIndex][slot.Day][slot.Block] == 1);
                 }
                 else
                 {
@@ -131,6 +134,10 @@ namespace SchedulePlanner.Core
             var result = _resultBuilder.BuildResult(context, variables, penalties, _config, solver, status);
 
             _scheduleLogger.LogResult(result);
+
+            stopwatch.Stop();
+            SchedulerDiagnostics.SchedulerRuns.Add(1);
+            SchedulerDiagnostics.SchedulerDuration.Record(stopwatch.Elapsed.TotalMilliseconds);
 
             return Task.FromResult(result);
         }
@@ -196,13 +203,13 @@ namespace SchedulePlanner.Core
                 for (int day = 0; day < context.NumDays && day < prevTeacher.Days.Count; day++)
                 {
                     var prevDay = prevTeacher.Days[day];
-                    for (int block = 0; block < context.BlocksPerDay && block < prevDay.Blocks.Count; block++)
+                    for (int block = 0; block < context.BlocksPerDayList[day] && block < prevDay.Blocks.Count; block++)
                     {
                         var prevBlock = prevDay.Blocks[block];
                         // Find if this assignment was scheduled in previous
                         if (!prevBlock.IsFree && prevBlock.ClassKey == assignment.Config.Key)
                         {
-                            context.Model.AddHint(variables.Assignment[assignmentIndex, day, block], 1);
+                            context.Model.AddHint(variables.Assignment[assignmentIndex][day][block], 1);
                         }
                     }
                 }
@@ -272,7 +279,14 @@ namespace SchedulePlanner.Core
         IReadOnlyDictionary<string, TeacherGroup> TeacherGroups,
         IReadOnlyDictionary<string, IReadOnlyList<ClassAssignment>> RoomGroups,
         int NumDays,
-        IReadOnlyList<int> BlocksPerDayList);
+        IReadOnlyList<int> BlocksPerDayList)
+    {
+        // Secondary constructor for tests: accepts uniform blocks per day
+        public SchedulingContext(CpModel model, IReadOnlyList<ClassAssignment> classAssignments, IReadOnlyDictionary<string, TeacherGroup> teacherGroups, IReadOnlyDictionary<string, IReadOnlyList<ClassAssignment>> roomGroups, int numDays, int blocksPerDay)
+            : this(model, classAssignments, teacherGroups, roomGroups, numDays, Enumerable.Repeat(blocksPerDay, numDays).ToList())
+        {
+        }
+    }
 
     public sealed class ScheduleVariables
     {
@@ -281,6 +295,27 @@ namespace SchedulePlanner.Core
         public ScheduleVariables(BoolVar[][][] assignment)
         {
             Assignment = assignment;
+        }
+
+        // Compatibility constructor for tests using 3D arrays
+        public ScheduleVariables(BoolVar[,,] assignment3D)
+        {
+            var dim1 = assignment3D.GetLength(0);
+            var dim2 = assignment3D.GetLength(1);
+            var dim3 = assignment3D.GetLength(2);
+            Assignment = new BoolVar[dim1][][];
+            for (int i = 0; i < dim1; i++)
+            {
+                Assignment[i] = new BoolVar[dim2][];
+                for (int j = 0; j < dim2; j++)
+                {
+                    Assignment[i][j] = new BoolVar[dim3];
+                    for (int k = 0; k < dim3; k++)
+                    {
+                        Assignment[i][j][k] = assignment3D[i, j, k];
+                    }
+                }
+            }
         }
     }
 
@@ -292,8 +327,8 @@ namespace SchedulePlanner.Core
         IReadOnlyList<TeacherScheduleResult> TeacherSchedules,
         IReadOnlyList<ClassScheduleSummary> Classes,
         IReadOnlyList<RoomChangeResult> RoomChanges,
-        IReadOnlyList<RoomUtilization> RoomUtilizations,
-        IReadOnlyList<StreamScheduleResult> StreamSchedules);
+        IReadOnlyList<RoomUtilization> RoomUtilizations = null,
+        IReadOnlyList<StreamScheduleResult> StreamSchedules = null);
 
     public sealed record TeacherScheduleResult(
         string TeacherId,

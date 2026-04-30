@@ -97,9 +97,8 @@ namespace SchedulePlanner.Core
                             {
                                 scheduledBlocks++;
                             }
-                        }
-                    }
-                    }
+                         }
+                     }
 
                     classSummaries.Add(new ClassScheduleSummary(
                         entry.Config.Key,

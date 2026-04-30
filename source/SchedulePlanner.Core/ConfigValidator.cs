@@ -127,13 +127,20 @@ namespace SchedulePlanner.Core
                 _logger.LogWarning("MergedBlockConsistencyPenalty must be non-negative; falling back to zero.");
             }
 
+            var commonPlanningPenalty = Math.Max(0, config.CommonPlanningPenalty);
+
+            if (config.CommonPlanningPenalty < 0)
+            {
+                _logger.LogWarning("CommonPlanningPenalty must be non-negative; falling back to zero.");
+            }
+
             // Additional validations for K-12 features
             ValidateStreams(config);
             ValidateRooms(config);
             ValidateMergedBlocks(config);
             ValidateDayConfigs(config);
 
-            return new NormalizedSettings(solverTimeLimitSeconds, roomChangePenalty, scheduleSpreadPenalty, weekDistributionPenalty, classDayClusteringPenalty, classBlockConsistencyPenalty, streamFragmentationPenalty, sharedRoomChangePenalty, targetLoadAdherencePenalty, studentRoomTransitionPenalty, mergedBlockConsistencyPenalty, freeTimePenalty);
+            return new NormalizedSettings(solverTimeLimitSeconds, roomChangePenalty, scheduleSpreadPenalty, weekDistributionPenalty, classDayClusteringPenalty, classBlockConsistencyPenalty, streamFragmentationPenalty, sharedRoomChangePenalty, targetLoadAdherencePenalty, studentRoomTransitionPenalty, mergedBlockConsistencyPenalty, freeTimePenalty, commonPlanningPenalty);
         }
 
         private void ValidateStreams(SchedulerOptions config)
@@ -293,5 +300,5 @@ namespace SchedulePlanner.Core
         }
     }
 
-    public sealed record NormalizedSettings(double SolverTimeLimitSeconds, int RoomChangePenalty, int ScheduleSpreadPenalty, int WeekDistributionPenalty, int ClassDayClusteringPenalty, int ClassBlockConsistencyPenalty, int StreamFragmentationPenalty, int SharedRoomChangePenalty, int TargetLoadAdherencePenalty, int StudentRoomTransitionPenalty, int MergedBlockConsistencyPenalty, int FreeTimePenalty);
+    public sealed record NormalizedSettings(double SolverTimeLimitSeconds, int RoomChangePenalty, int ScheduleSpreadPenalty, int WeekDistributionPenalty, int ClassDayClusteringPenalty, int ClassBlockConsistencyPenalty, int StreamFragmentationPenalty, int SharedRoomChangePenalty, int TargetLoadAdherencePenalty, int StudentRoomTransitionPenalty, int MergedBlockConsistencyPenalty, int FreeTimePenalty, int CommonPlanningPenalty);
 }

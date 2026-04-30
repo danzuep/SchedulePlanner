@@ -16,17 +16,44 @@ namespace SchedulePlanner.Core
         var teachersById = config.Teachers
             .ToDictionary(t => t.Id, t => t, comparer);
 
-        var assignmentsByDepartment = config.Teachers
-            .SelectMany(t => t.Departments.Select(d => new { Department = d, TeacherId = t.Id }))
-            .Where(a => !string.IsNullOrWhiteSpace(a.Department))
-            .GroupBy(a => a.Department, comparer)
-            .ToDictionary(
-                g => g.Key,
-                g => g.Select(a => a.TeacherId)
-                    .Where(id => !string.IsNullOrWhiteSpace(id))
-                    .Distinct(comparer)
-                    .ToList(),
-                comparer);
+        var assignmentsByDepartment = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+
+        // From teacher Departments
+        foreach (var teacher in config.Teachers)
+        {
+            if (teacher.Departments == null) continue;
+            foreach (var dept in teacher.Departments)
+            {
+                if (string.IsNullOrWhiteSpace(dept)) continue;
+                if (!assignmentsByDepartment.TryGetValue(dept, out var list))
+                {
+                    list = new List<string>();
+                    assignmentsByDepartment[dept] = list;
+                }
+                list.Add(teacher.Id);
+            }
+        }
+
+        // From explicit TeacherDepartments mapping
+        if (config.TeacherDepartments != null)
+        {
+            foreach (var td in config.TeacherDepartments)
+            {
+                if (string.IsNullOrWhiteSpace(td.Department)) continue;
+                if (!assignmentsByDepartment.TryGetValue(td.Department, out var list))
+                {
+                    list = new List<string>();
+                    assignmentsByDepartment[td.Department] = list;
+                }
+                list.Add(td.TeacherId);
+            }
+        }
+
+        // Ensure distinct teacher IDs per department
+        foreach (var key in assignmentsByDepartment.Keys.ToList())
+        {
+            assignmentsByDepartment[key] = assignmentsByDepartment[key].Distinct(comparer).ToList();
+        }
 
         var results = new List<ClassAssignment>(config.Classes.Count);
 
@@ -145,7 +172,10 @@ namespace SchedulePlanner.Core
         }
     }
 
-    public sealed record ClassAssignment(Class Config, IReadOnlyList<Teacher> Teachers, int Index, string Room, ClassStream? ClassStream);
+    public sealed record ClassAssignment(Class Config, IReadOnlyList<Teacher> Teachers, int Index, string Room, ClassStream? ClassStream)
+    {
+        public Teacher Teacher => Teachers.FirstOrDefault();
+    }
 
     public sealed record TeacherGroup(Teacher Teacher, IReadOnlyList<ClassAssignment> Classes);
 }

@@ -22,8 +22,8 @@ namespace SchedulePlanner.Core.Tests
 
             var result = await service.RunAsync();
 
-            Assert.That(result.HasSolution, Is.True);
-            Assert.That(result.TeacherSchedules, Has.Count.EqualTo(3));
+            await Assert.That(result.HasSolution).IsTrue();
+            await Assert.That(result.TeacherSchedules.Count).IsEqualTo(3);
         }
 
         [Test]
@@ -34,8 +34,8 @@ namespace SchedulePlanner.Core.Tests
 
             var result = await service.RunAsync();
 
-            Assert.That(result.HasSolution, Is.True);
-            Assert.That(result.StreamSchedules, Is.Not.Empty);
+            await Assert.That(result.HasSolution).IsTrue();
+            await Assert.That(result.StreamSchedules).IsNotEmpty();
         }
 
         [Test]
@@ -46,7 +46,7 @@ namespace SchedulePlanner.Core.Tests
 
             var result = await service.RunAsync();
 
-            Assert.That(result.HasSolution, Is.True);
+            await Assert.That(result.HasSolution).IsTrue();
         }
 
         [Test]
@@ -57,7 +57,7 @@ namespace SchedulePlanner.Core.Tests
 
             var result = await service.RunAsync();
 
-            Assert.That(result.HasSolution, Is.True);
+            await Assert.That(result.HasSolution).IsTrue();
         }
 
         [Test]
@@ -68,7 +68,7 @@ namespace SchedulePlanner.Core.Tests
 
             var result = await service.RunAsync();
 
-            Assert.That(result.HasSolution, Is.True);
+            await Assert.That(result.HasSolution).IsTrue();
         }
 
         [Test]
@@ -79,9 +79,9 @@ namespace SchedulePlanner.Core.Tests
 
             var result = await service.RunAsync();
 
-            Assert.That(result.HasSolution, Is.True);
-            Assert.That(result.Teachers, Has.Count.GreaterThan(50));
-            Assert.That(result.Classes, Has.Count.GreaterThan(50));
+            await Assert.That(result.HasSolution).IsTrue();
+            await Assert.That(result.TeacherSchedules.Count).IsGreaterThan(50);
+            await Assert.That(result.Classes.Count).IsGreaterThan(50);
         }
 
         [Test]
@@ -93,7 +93,7 @@ namespace SchedulePlanner.Core.Tests
 
             var result = await service.RunAsync();
 
-            Assert.That(result.HasSolution, Is.True);
+            await Assert.That(result.HasSolution).IsTrue();
         }
 
         [Test]
@@ -106,7 +106,7 @@ namespace SchedulePlanner.Core.Tests
             var result = await service.RunAsync();
             stopwatch.Stop();
 
-            Assert.That(result.HasSolution, Is.True);
+            await Assert.That(result.HasSolution).IsTrue();
             Console.WriteLine($"Basic scenario solved in {stopwatch.ElapsedMilliseconds} ms");
         }
 
@@ -120,7 +120,7 @@ namespace SchedulePlanner.Core.Tests
             var result = await service.RunAsync();
             stopwatch.Stop();
 
-            Assert.That(result.HasSolution, Is.True);
+            await Assert.That(result.HasSolution).IsTrue();
             Console.WriteLine($"Large K12 school solved in {stopwatch.ElapsedMilliseconds} ms");
         }
     }

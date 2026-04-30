@@ -180,10 +180,10 @@ namespace SchedulePlanner.Core.Tests
                     Department = "Science",
                     PreferredRoom = "Lab1",
                     WeeklyBlocks = 4,
-                    Streams = new List<Stream>
+                    Streams = new List<ClassStream>
                     {
-                        new Stream { Id = "Sci101-Advanced", Size = 10, ProficiencyLevel = "Advanced", LinkedSubjects = new[] { "Science" } },
-                        new Stream { Id = "Sci101-Basic", Size = 15, ProficiencyLevel = "Basic", LinkedSubjects = new[] { "Science" } }
+                        new ClassStream { Id = "Sci101-Advanced", Size = 10, ProficiencyLevel = "Advanced", LinkedSubjects = new[] { "Science" } },
+                        new ClassStream { Id = "Sci101-Basic", Size = 15, ProficiencyLevel = "Basic", LinkedSubjects = new[] { "Science" } }
                     }
                 },
                 new Class
@@ -193,18 +193,18 @@ namespace SchedulePlanner.Core.Tests
                     Department = "Math",
                     PreferredRoom = "Room1",
                     WeeklyBlocks = 3,
-                    Streams = new List<Stream>
+                    Streams = new List<ClassStream>
                     {
-                        new Stream { Id = "Math101-Advanced", Size = 12, ProficiencyLevel = "Advanced", LinkedSubjects = new[] { "Math" } }
+                        new ClassStream { Id = "Math101-Advanced", Size = 12, ProficiencyLevel = "Advanced", LinkedSubjects = new[] { "Math" } }
                     }
                 }
             };
 
-            var streams = new List<Stream>
+            var streams = new List<ClassStream>
             {
-                new Stream { Id = "Sci101-Advanced", Size = 10, ProficiencyLevel = "Advanced", LinkedSubjects = new[] { "Science" } },
-                new Stream { Id = "Sci101-Basic", Size = 15, ProficiencyLevel = "Basic", LinkedSubjects = new[] { "Science" } },
-                new Stream { Id = "Math101-Advanced", Size = 12, ProficiencyLevel = "Advanced", LinkedSubjects = new[] { "Math" } }
+                new ClassStream { Id = "Sci101-Advanced", Size = 10, ProficiencyLevel = "Advanced", LinkedSubjects = new[] { "Science" } },
+                new ClassStream { Id = "Sci101-Basic", Size = 15, ProficiencyLevel = "Basic", LinkedSubjects = new[] { "Science" } },
+                new ClassStream { Id = "Math101-Advanced", Size = 12, ProficiencyLevel = "Advanced", LinkedSubjects = new[] { "Math" } }
             };
 
             var rooms = new List<Room>
@@ -243,7 +243,7 @@ namespace SchedulePlanner.Core.Tests
             var grades = new[] { "9", "10", "11", "12" };
             var teachers = new List<Teacher>();
             var classes = new List<Class>();
-            var streams = new List<Stream>();
+            var streams = new List<ClassStream>();
             var rooms = new List<Room>();
 
             // Generate rooms
@@ -279,11 +279,11 @@ namespace SchedulePlanner.Core.Tests
                     for (int c = 1; c <= 4; c++) // 4 classes per grade per subject
                     {
                         var clsKey = $"{dept}{grade}{c}";
-                        var clsStreams = new List<Stream>();
+                        var clsStreams = new List<ClassStream>();
                         for (int s = 1; s <= 2; s++) // 2 streams per class
                         {
                             var streamId = $"{clsKey}-Stream{s}";
-                            var stream = new Stream
+                            var stream = new ClassStream
                             {
                                 Id = streamId,
                                 Size = 20, // approx 400 / 4 / 2 / 2.5 wait, adjust
@@ -347,13 +347,13 @@ namespace SchedulePlanner.Core.Tests
             }
 
             var classes = new List<Class>();
-            var streams = new List<Stream>();
+            var streams = new List<ClassStream>();
             for (int i = 1; i <= scale * 3; i++)
             {
-                var streamsList = new List<Stream>();
+                var streamsList = new List<ClassStream>();
                 for (int s = 1; s <= StreamCountPerClass; s++)
                 {
-                    var stream = new Stream
+                    var stream = new ClassStream
                     {
                         Id = $"C{i}-S{s}",
                         Size = SchoolSize / (scale * 3 * StreamCountPerClass),
