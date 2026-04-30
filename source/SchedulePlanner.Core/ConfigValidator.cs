@@ -139,8 +139,22 @@ namespace SchedulePlanner.Core
             ValidateRooms(config);
             ValidateMergedBlocks(config);
             ValidateDayConfigs(config);
+            ValidateTeacherDepartments(config);
 
-            return new NormalizedSettings(solverTimeLimitSeconds, roomChangePenalty, scheduleSpreadPenalty, weekDistributionPenalty, classDayClusteringPenalty, classBlockConsistencyPenalty, streamFragmentationPenalty, sharedRoomChangePenalty, targetLoadAdherencePenalty, studentRoomTransitionPenalty, mergedBlockConsistencyPenalty, freeTimePenalty, commonPlanningPenalty);
+            return new NormalizedSettings(
+                solverTimeLimitSeconds,
+                roomChangePenalty,
+                scheduleSpreadPenalty,
+                weekDistributionPenalty,
+                classDayClusteringPenalty,
+                classBlockConsistencyPenalty,
+                streamFragmentationPenalty,
+                sharedRoomChangePenalty,
+                targetLoadAdherencePenalty,
+                studentRoomTransitionPenalty,
+                mergedBlockConsistencyPenalty,
+                freeTimePenalty,
+                commonPlanningPenalty);
         }
 
         private void ValidateStreams(SchedulerOptions config)
@@ -298,7 +312,63 @@ namespace SchedulePlanner.Core
                 throw new InvalidOperationException("Not all scheduling days have DayConfigs.");
             }
         }
+
+        private void ValidateTeacherDepartments(SchedulerOptions config)
+        {
+            // Build set of departments covered by teachers and explicit TeacherDepartments
+            var coveredDepartments = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            if (config.Teachers != null)
+            {
+                foreach (var teacher in config.Teachers)
+                {
+                    if (teacher.Departments != null)
+                    {
+                        foreach (var dept in teacher.Departments)
+                        {
+                            if (!string.IsNullOrWhiteSpace(dept))
+                                coveredDepartments.Add(dept);
+                        }
+                    }
+                }
+            }
+
+            if (config.TeacherDepartments != null)
+            {
+                foreach (var td in config.TeacherDepartments)
+                {
+                    if (!string.IsNullOrWhiteSpace(td.Department))
+                        coveredDepartments.Add(td.Department);
+                }
+            }
+
+            // Ensure every class's department is covered
+            if (config.Classes != null)
+            {
+                foreach (var cls in config.Classes)
+                {
+                    if (!string.IsNullOrWhiteSpace(cls.Department) && !coveredDepartments.Contains(cls.Department))
+                    {
+                        throw new InvalidOperationException(
+                            $"No teacher assignment exists for department '{cls.Department}' required by class '{cls.Key}'.");
+                    }
+                }
+            }
+        }
     }
 
-    public sealed record NormalizedSettings(double SolverTimeLimitSeconds, int RoomChangePenalty, int ScheduleSpreadPenalty, int WeekDistributionPenalty, int ClassDayClusteringPenalty, int ClassBlockConsistencyPenalty, int StreamFragmentationPenalty, int SharedRoomChangePenalty, int TargetLoadAdherencePenalty, int StudentRoomTransitionPenalty, int MergedBlockConsistencyPenalty, int FreeTimePenalty, int CommonPlanningPenalty);
+    public sealed record NormalizedSettings(
+        double SolverTimeLimitSeconds,
+        int RoomChangePenalty,
+        int ScheduleSpreadPenalty,
+        int WeekDistributionPenalty,
+        int ClassDayClusteringPenalty,
+        int ClassBlockConsistencyPenalty,
+        int StreamFragmentationPenalty,
+        int SharedRoomChangePenalty,
+        int TargetLoadAdherencePenalty,
+        int StudentRoomTransitionPenalty,
+        int MergedBlockConsistencyPenalty,
+        int FreeTimePenalty,
+        int CommonPlanningPenalty);
 }

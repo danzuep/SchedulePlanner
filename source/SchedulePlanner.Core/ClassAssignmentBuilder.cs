@@ -81,6 +81,13 @@ namespace SchedulePlanner.Core
                 }
             }
 
+            // Validate: there must be exactly one teacher ID for single-teacher classes; multiple only if explicitly allowed (co-teaching)
+            if (teacherIds.Count > 1 && cls.Streams.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    $"Multiple teachers assigned to class '{cls.Key}' without co-teaching (streams) is not allowed.");
+            }
+
             var teachers = new List<Teacher>();
             foreach (var teacherId in teacherIds)
             {
@@ -98,17 +105,19 @@ namespace SchedulePlanner.Core
                     $"Unable to determine a room for class {cls.Key} taught by {string.Join(", ", teachers.Select(t => t.FullName))}.");
             }
 
-            // For classes without streams, create a single assignment
+            // For classes without streams, create a single assignment with unique sequential index
             if (cls.Streams.Count == 0)
             {
-                results.Add(new ClassAssignment(cls, teachers, index, room, null));
+                var assignmentIndex = results.Count;
+                results.Add(new ClassAssignment(cls, teachers, assignmentIndex, room, null));
             }
             else
             {
                 // For streamed classes, create an assignment for each stream
                 foreach (var stream in cls.Streams)
                 {
-                    results.Add(new ClassAssignment(cls, teachers, index, room, stream));
+                    var assignmentIndex = results.Count;
+                    results.Add(new ClassAssignment(cls, teachers, assignmentIndex, room, stream));
                 }
             }
         }
@@ -152,18 +161,43 @@ namespace SchedulePlanner.Core
 
         private static string ResolveRoom(Class cls, Teacher teacher, SchedulerOptions config)
         {
-            var candidate = !string.IsNullOrWhiteSpace(cls.PreferredRoom) ? cls.PreferredRoom :
-                            !string.IsNullOrWhiteSpace(teacher.PreferredRoom) ? teacher.PreferredRoom :
-                            string.Empty;
+            // Priority: 1) teacher.PreferredRoom, 2) cls.PreferredRoom, 3) any suitable room from config, 4) default based on class key
+            // Determine required capacity: if class has streams, use the largest stream size; otherwise no requirement (0).
+            var required = cls.Streams.Count > 0 ? cls.Streams.Max(s => s.Size) : 0;
 
-            if (string.IsNullOrWhiteSpace(candidate)) return string.Empty;
+            bool RoomSuitable(string roomId)
+            {
+                if (required == 0) return true;
+                var capacity = GetRoomCapacity(config, roomId);
+                return required <= capacity;
+            }
 
-            var capacity = GetRoomCapacity(config, candidate);
-            var required = cls.Streams.Count > 0 ? cls.Streams.Sum(s => s.Size) : 30; // default
+            // Try teacher's preferred room
+            if (!string.IsNullOrWhiteSpace(teacher.PreferredRoom) && RoomSuitable(teacher.PreferredRoom))
+            {
+                return teacher.PreferredRoom;
+            }
 
-            if (required > capacity) return string.Empty;
+            // Try class's preferred room
+            if (!string.IsNullOrWhiteSpace(cls.PreferredRoom) && RoomSuitable(cls.PreferredRoom))
+            {
+                return cls.PreferredRoom;
+            }
 
-            return candidate;
+            // Try any room in config that satisfies capacity
+            if (config.Rooms != null)
+            {
+                foreach (var room in config.Rooms)
+                {
+                    if (RoomSuitable(room.Id))
+                    {
+                        return room.Id;
+                    }
+                }
+            }
+
+            // Fallback: generate a deterministic room ID
+            return $"Room_{cls.Key}";
         }
 
         private static int GetRoomCapacity(SchedulerOptions config, string roomId)

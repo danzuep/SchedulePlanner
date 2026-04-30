@@ -69,23 +69,29 @@ namespace SchedulePlanner.Core
             }
 
             // Log stream completion rates
-            foreach (var streamSchedule in result.StreamSchedules)
+            if (result.StreamSchedules != null)
             {
-                var totalBlocks = streamSchedule.Days.Sum(d => d.Blocks.Count(b => !b.IsFree));
-                _logger.LogInformation(
-                    "Stream {StreamId} for class {ClassKey} scheduled for {Count} blocks.",
-                    streamSchedule.StreamId,
-                    streamSchedule.ClassKey,
-                    totalBlocks);
+                foreach (var streamSchedule in result.StreamSchedules)
+                {
+                    var totalBlocks = streamSchedule.Days.Sum(d => d.Blocks.Count(b => !b.IsFree));
+                    _logger.LogInformation(
+                        "Stream {StreamId} for class {ClassKey} scheduled for {Count} blocks.",
+                        streamSchedule.StreamId,
+                        streamSchedule.ClassKey,
+                        totalBlocks);
+                }
             }
 
             // Log room utilization
-            foreach (var roomUtil in result.RoomUtilizations)
+            if (result.RoomUtilizations != null)
             {
-                _logger.LogInformation(
-                    "Room {RoomId} utilization: {Percent:F2}%.",
-                    roomUtil.RoomId,
-                    roomUtil.UtilizationPercent);
+                foreach (var roomUtil in result.RoomUtilizations)
+                {
+                    _logger.LogInformation(
+                        "Room {RoomId} utilization: {Percent:F2}%.",
+                        roomUtil.RoomId,
+                        roomUtil.UtilizationPercent);
+                }
             }
 
             foreach (var roomChange in result.RoomChanges)

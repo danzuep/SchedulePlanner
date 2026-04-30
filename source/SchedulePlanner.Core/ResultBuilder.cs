@@ -29,6 +29,8 @@ namespace SchedulePlanner.Core
             var teacherSchedules = new List<TeacherScheduleResult>();
             var classSummaries = new List<ClassScheduleSummary>();
             var roomChanges = new List<RoomChangeResult>();
+            IReadOnlyList<RoomUtilization>? roomUtilizations = null;
+            IReadOnlyList<StreamScheduleResult>? streamSchedules = null;
 
             if (hasSolution)
             {
@@ -40,41 +42,41 @@ namespace SchedulePlanner.Core
                     {
                         var blocks = new List<BlockScheduleResult>();
 
-                    for (var blockIndex = 0; blockIndex < context.BlocksPerDayList[day]; ++blockIndex)
-                    {
-                        if (teacherEntry.Classes.FirstOrDefault(entry =>
-                            solver.BooleanValue(variables.Assignment[entry.Index][day][blockIndex])) is ClassAssignment assigned)
+                        for (var blockIndex = 0; blockIndex < context.BlocksPerDayList[day]; ++blockIndex)
                         {
-                            blocks.Add(new BlockScheduleResult(
-                                blockIndex,
-                                false,
-                                assigned.Config.Key,
-                                assigned.Config.Name,
-                                assigned.Room,
-                                assigned.Config.Department));
+                            if (teacherEntry.Classes.FirstOrDefault(entry =>
+                                solver.BooleanValue(variables.Assignment[entry.Index][day][blockIndex])) is ClassAssignment assigned)
+                            {
+                                blocks.Add(new BlockScheduleResult(
+                                    blockIndex,
+                                    false,
+                                    assigned.Config.Key,
+                                    assigned.Config.Name,
+                                    assigned.Room,
+                                    assigned.Config.Department));
+                            }
+                            else if (config.PresetBlocks.FirstOrDefault(b => b.Index == blockIndex &&
+                                b.Days.Contains(config.Days[day])) is PresetBlockConfig presetBlock)
+                            {
+                                blocks.Add(new BlockScheduleResult(
+                                    blockIndex,
+                                    false,
+                                    presetBlock.Name,
+                                    presetBlock.Name,
+                                    null,
+                                    "Preset"));
+                            }
+                            else
+                            {
+                                blocks.Add(new BlockScheduleResult(
+                                    blockIndex,
+                                    true,
+                                    null,
+                                    null,
+                                    null,
+                                    null));
+                            }
                         }
-                        else if (config.PresetBlocks.FirstOrDefault(b => b.Index == blockIndex &&
-                            b.Days.Contains(config.Days[day])) is PresetBlockConfig presetBlock)
-                        {
-                            blocks.Add(new BlockScheduleResult(
-                                blockIndex,
-                                false,
-                                presetBlock.Name,
-                                presetBlock.Name,
-                                null,
-                                "Preset"));
-                        }
-                        else
-                        {
-                            blocks.Add(new BlockScheduleResult(
-                                blockIndex,
-                                true,
-                                null,
-                                null,
-                                null,
-                                null));
-                        }
-                    }
 
                         days.Add(new DayScheduleResult(config.Days[day], blocks));
                     }
@@ -97,8 +99,8 @@ namespace SchedulePlanner.Core
                             {
                                 scheduledBlocks++;
                             }
-                         }
-                     }
+                        }
+                    }
 
                     classSummaries.Add(new ClassScheduleSummary(
                         entry.Config.Key,
@@ -133,10 +135,10 @@ namespace SchedulePlanner.Core
                         penalty.ToClassKey,
                         penalty.ToRoom));
                 }
-            }
 
-            var roomUtilizations = CalculateRoomUtilizations(context, variables, config, solver);
-            var streamSchedules = BuildStreamSchedules(context, variables, config, solver);
+                roomUtilizations = CalculateRoomUtilizations(context, variables, config, solver);
+                streamSchedules = BuildStreamSchedules(context, variables, config, solver);
+            }
 
             return new ScheduleResult(
                 hasSolution ? "Optimal" : "Infeasible",
