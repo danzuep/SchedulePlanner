@@ -59,4 +59,6 @@ The software relies on Microsoft Excel, so if you don't have that installed, you
 
 ---
 
+*Animations created with [ScreenToGif](https://www.screentogif.com/).*
+
 *SchedulePlanner is open-source software released under the MIT License. Contributions and feedback are welcome!*

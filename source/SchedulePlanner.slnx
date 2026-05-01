@@ -5,10 +5,14 @@
   </Folder>
   <Folder Name="/1-Application/">
     <Project Path="SchedulePlanner.ImportExport/SchedulePlanner.ImportExport.csproj" Id="08c765d9-5e66-4256-bbb1-40e37046e15c" />
+    <Project Path="SchedulePlanner.ImportExport.Tests/SchedulePlanner.ImportExport.Tests.csproj" Id="a3b8c7d2-9e4f-4a1b-8c6d-2e5f3a1b4c8d" />
   </Folder>
   <Folder Name="/2-Presentation/">
     <Project Path="SchedulePlanner.Cli/SchedulePlanner.Cli.csproj" Id="f0f3dfa0-e85b-4cff-9a2d-f06b9568b3df" />
     <Project Path="SchedulePlanner.Worker/SchedulePlanner.Worker.csproj" Id="953900ae-622b-4d25-8e69-d570b3fadfb6" />
     <Project Path="SchedulePlanner.Wpf/SchedulePlanner.Wpf.csproj" Id="67587dd2-4158-4ea2-a955-0c4b586dceaa" />
+    <Project Path="SchedulePlanner.Cli.Tests/SchedulePlanner.Cli.Tests.csproj" Id="b2c9d8e3-5f6a-4b2c-9d7e-3f6a2b5c8d1e" />
+    <Project Path="SchedulePlanner.Worker.Tests/SchedulePlanner.Worker.Tests.csproj" Id="c4d1e9f4-7a8b-4c3d-9e8f-4g7h3i6j9k2l" />
+    <Project Path="SchedulePlanner.Wpf.Tests/SchedulePlanner.Wpf.Tests.csproj" Id="d5e2f0a5-8b9c-4d4e-af90-5h8i4j7k0l3m" />
   </Folder>
 </Solution>

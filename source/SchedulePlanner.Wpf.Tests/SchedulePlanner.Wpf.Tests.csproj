@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="TUnit" Version="1.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SchedulePlanner.Wpf\SchedulePlanner.Wpf.csproj" />
+  </ItemGroup>
+
+</Project>
