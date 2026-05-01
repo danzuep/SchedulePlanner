@@ -6,4 +6,4 @@
 ## Usability & Operational Features
 
 ## General Improvements
-- [ ] Add new test projects for all the projects that don't have test projects yet.
+- [x] Add new test projects for all the projects that don't have test projects yet.
