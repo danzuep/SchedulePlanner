@@ -17,7 +17,7 @@ namespace SchedulePlanner.ImportExport.Excel
             _logger = logger ?? NullLogger<ImportExportService>.Instance;
         }
 
-        public async Task RunAsync(CancellationToken cancellationToken = default)
+        public async Task RunAsync(CancellationToken cancellationToken = default, IProgress<SolverProgress>? progress = null)
         {
             using var scope = _serviceScopeFactory.CreateScope();
             var provider = scope.ServiceProvider;
@@ -35,7 +35,7 @@ namespace SchedulePlanner.ImportExport.Excel
             var importOptions = new ImportExportOptions { FilePath = configFile };
             var reader = new ExcelSchedulerConfigReader(importOptions, schedulerLogger);
             var importService = new ImportService(reader, schedulingLogger);
-            var result = await importService.RunAsync();
+            var result = await importService.RunAsync(cancellationToken, progress).ConfigureAwait(false);
             _logger.LogDebug("Processing completed successfully.");
             var filePath = await exportService.ExportAsync(result, importExportOptions.FilePath, addTimestamp: true);
             _logger.LogDebug("Result written successfully.");

@@ -9,12 +9,12 @@ namespace SchedulePlanner.Core
 {
     public interface IService
     {
-        Task RunAsync(CancellationToken cancellationToken = default);
+        Task RunAsync(CancellationToken cancellationToken = default, IProgress<SolverProgress>? progress = null);
     }
 
     public interface IService<T>
     {
-        Task<T> RunAsync(CancellationToken cancellationToken = default);
+        Task<T> RunAsync(CancellationToken cancellationToken = default, IProgress<SolverProgress>? progress = null);
     }
 
     public sealed class SchedulingService : IService<ScheduleResult>
@@ -50,7 +50,7 @@ namespace SchedulePlanner.Core
             _scheduleLogger = scheduleLogger ?? new ScheduleLogger();
         }
 
-        public Task<ScheduleResult> RunAsync(CancellationToken cancellationToken = default)
+        public Task<ScheduleResult> RunAsync(CancellationToken cancellationToken = default, IProgress<SolverProgress>? progress = null)
         {
             var normalized = _configValidator.ValidateAndNormalizeConfig(_config);
 
@@ -59,6 +59,14 @@ namespace SchedulePlanner.Core
                 _config.Days.Count,
                 _config.BlocksPerDay);
 
+            progress?.Report(new SolverProgress(
+                Message: "Building scheduling context...",
+                CurrentGap: null,
+                CurrentObjective: null,
+                BestObjective: null,
+                IterationsCompleted: 0,
+                Timestamp: DateTime.UtcNow));
+
             var context = BuildSchedulingContext(cancellationToken);
             var variables = CreateDecisionVariables(context, cancellationToken);
             var stopwatch = Stopwatch.StartNew();
@@ -66,6 +74,8 @@ namespace SchedulePlanner.Core
             // Fix pre-assigned slots
             foreach (var slot in _config.PreAssignedSlots)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 if (slot.AssignmentIndex >= 0 && slot.AssignmentIndex < context.ClassAssignments.Count &&
                     slot.Day >= 0 && slot.Day < context.NumDays &&
                     slot.Block >= 0 && slot.Block < context.BlocksPerDayList[slot.Day])
@@ -83,6 +93,14 @@ namespace SchedulePlanner.Core
             {
                 SetHintsFromPreviousSolution(context, variables, _config.PreviousScheduleResult);
             }
+
+            progress?.Report(new SolverProgress(
+                Message: "Adding constraints and optimization objectives...",
+                CurrentGap: null,
+                CurrentObjective: null,
+                BestObjective: null,
+                IterationsCompleted: 0,
+                Timestamp: DateTime.UtcNow));
 
             _constraintBuilder.AddSchedulingRules(context, variables, _config, cancellationToken);
             var penalties = _optimizationBuilder.AddRoomChangeOptimization(context, variables, _config, normalized.RoomChangePenalty, cancellationToken);
@@ -128,8 +146,20 @@ namespace SchedulePlanner.Core
             context.Model.Minimize(
                 LinearExpr.WeightedSum(allPenaltyVars.Cast<LinearExpr>(), allPenaltyWeights));
 
+            progress?.Report(new SolverProgress(
+                Message: "Starting CP-SAT solver...",
+                CurrentGap: null,
+                CurrentObjective: null,
+                BestObjective: null,
+                IterationsCompleted: 0,
+                Timestamp: DateTime.UtcNow,
+                Status: "Solving"));
+
             var solver = CreateSolver(normalized.SolverTimeLimitSeconds);
-            var status = solver.Solve(context.Model);
+
+            var status = progress != null
+                ? solver.Solve(context.Model, new ProgressCallback(progress, cancellationToken, _logger))
+                : solver.Solve(context.Model);
 
             var result = _resultBuilder.BuildResult(context, variables, penalties, _config, solver, status);
 
@@ -138,6 +168,15 @@ namespace SchedulePlanner.Core
             stopwatch.Stop();
             SchedulerDiagnostics.SchedulerRuns.Add(1);
             SchedulerDiagnostics.SchedulerDuration.Record(stopwatch.Elapsed.TotalMilliseconds);
+
+            progress?.Report(new SolverProgress(
+                Message: "Solver completed",
+                CurrentGap: null,
+                CurrentObjective: result.ObjectiveValue,
+                BestObjective: result.ObjectiveValue,
+                IterationsCompleted: 0,
+                Timestamp: DateTime.UtcNow,
+                Status: status.ToString()));
 
             return Task.FromResult(result);
         }
@@ -222,6 +261,58 @@ namespace SchedulePlanner.Core
             {
                 StringParameters = $"max_time_in_seconds:{solverTimeLimitSeconds}"
             };
+        }
+
+        /// <summary>
+        /// Callback for OR-Tools CP-SAT solver to report progress.
+        /// </summary>
+        private sealed class ProgressCallback : CpSolverSolutionCallback
+        {
+            private readonly IProgress<SolverProgress> _progress;
+            private readonly CancellationToken _cancellationToken;
+            private readonly ILogger _logger;
+            private int _solutionCount;
+            private Stopwatch _stopwatch;
+
+            public ProgressCallback(IProgress<SolverProgress> progress, CancellationToken cancellationToken, ILogger logger)
+            {
+                _progress = progress;
+                _cancellationToken = cancellationToken;
+                _logger = logger;
+                _stopwatch = Stopwatch.StartNew();
+            }
+
+            public override void OnSolutionCallback()
+            {
+                _solutionCount++;
+                if (_cancellationToken.IsCancellationRequested)
+                {
+                    _logger.LogInformation("Cancellation requested, stopping solver search.");
+                    StopSearch();
+                    return;
+                }
+
+                double currentObjective = this.ObjectiveValue();
+                double bestBound = this.BestObjectiveBound();
+                var gap = bestBound - currentObjective;
+                var progressInfo = new SolverProgress(
+                    Message: $"Solution {_solutionCount} found (objective: {currentObjective:0.##}, gap: {gap:0.##})",
+                    CurrentGap: gap,
+                    CurrentObjective: currentObjective,
+                    BestObjective: currentObjective,
+                    IterationsCompleted: _solutionCount,
+                    Timestamp: DateTime.UtcNow,
+                    Status: "Solving");
+
+                try
+                {
+                    _progress.Report(progressInfo);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to report solver progress");
+                }
+            }
         }
     }
 

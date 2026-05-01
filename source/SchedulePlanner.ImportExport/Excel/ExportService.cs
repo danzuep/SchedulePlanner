@@ -16,7 +16,7 @@ namespace SchedulePlanner.ImportExport.Excel
             _logger = logger ?? NullLogger<ExportService>.Instance;
         }
 
-        public async Task RunAsync(CancellationToken cancellationToken = default)
+        public async Task RunAsync(CancellationToken cancellationToken = default, IProgress<SolverProgress>? progress = null)
         {
             var importExportConfig = ImportExportOptions.Default;
             _ = await ExportAsync(_config, importExportConfig.FilePath).ConfigureAwait(false);

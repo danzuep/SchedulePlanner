@@ -14,11 +14,11 @@ namespace SchedulePlanner.ImportExport.Excel
             _logger = logger;
         }
 
-        public async Task<ScheduleResult> RunAsync(CancellationToken cancellationToken = default)
+        public async Task<ScheduleResult> RunAsync(CancellationToken cancellationToken = default, IProgress<SolverProgress>? progress = null)
         {
             var schedulerConfig = await _builder.BuildAsync(cancellationToken).ConfigureAwait(false);
             var schedulingService = new SchedulingService(schedulerConfig, _logger);
-            return await schedulingService.RunAsync(cancellationToken).ConfigureAwait(false);
+            return await schedulingService.RunAsync(cancellationToken, progress).ConfigureAwait(false);
         }
     }
 }

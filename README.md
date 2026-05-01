@@ -22,18 +22,14 @@ SchedulePlanner is a classroom scheduling application that automates the creatio
 - Week distribution balancing
 - Class block consistency
 - Common planning time for co-teachers
-
-### User Interface
-- Excel-based import/export for easy data entry
-- WPF desktop application for visual schedule review
-- Command-line interface for automated scheduling
-- Background worker service for batch processing
+- Real-time progress reporting via Temporal heartbeats
 
 ### Developer Features
 - OpenTelemetry-compatible diagnostics
 - Extensible constraint and optimization builder pattern
 - OR-Tools CP-SAT solver backend
-- Comprehensive test coverage (54 tests)
+- Comprehensive test coverage (62 tests)
+- **Temporal workflow integration** for reliable long-running scheduling with cancellation and progress tracking
 
 ## Usage
 
