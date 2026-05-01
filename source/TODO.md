@@ -14,5 +14,5 @@
   - [x] Update all constraints and optimizations for variable blocks
   - [x] Add validation for day configs
   - [x] Update results to handle variable blocks per day
-- [ ] Make the GenerateLargeK12School scenario more realistic for a secondary school instead of just four classes, and realistic subjects for the highschool students to take.
-- [ ] Update all the projects with the new behaviour, and add basic tests for all the projects that don't have test projects yet.
+- [x] Make the GenerateLargeK12School scenario more realistic for a secondary school instead of just four classes, and realistic subjects for the highschool students to take.
+- [x] Update all the projects with the new behaviour, and add basic tests for all the projects that don't have test projects yet.
