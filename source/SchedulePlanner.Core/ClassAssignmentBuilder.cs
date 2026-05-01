@@ -74,10 +74,21 @@ namespace SchedulePlanner.Core
                     throw new InvalidOperationException($"Class {cls.Key} must specify a department.");
                 }
 
-                if (!assignmentsByDepartment.TryGetValue(cls.Department, out teacherIds) || teacherIds.Count == 0)
+                if (!assignmentsByDepartment.TryGetValue(cls.Department, out var candidates) || candidates.Count == 0)
                 {
                     throw new InvalidOperationException(
                         $"No teacher assignment exists for department '{cls.Department}' required by class '{cls.Key}'.");
+                }
+
+                // For classes without streams (single-teacher), select exactly one teacher.
+                // For streamed classes (co-teaching allowed), keep all candidates.
+                if (cls.Streams.Count == 0)
+                {
+                    teacherIds = new List<string> { candidates.First() };
+                }
+                else
+                {
+                    teacherIds = candidates.ToList();
                 }
             }
 
@@ -196,8 +207,10 @@ namespace SchedulePlanner.Core
                 }
             }
 
-            // Fallback: generate a deterministic room ID
-            return $"Room_{cls.Key}";
+            // No suitable room found
+            throw new InvalidOperationException(
+                $"Unable to determine a suitable room for class {cls.Key} taught by {teacher.FullName}. " +
+                $"Ensure teacher or class has a preferred room, or define rooms in the configuration.");
         }
 
         private static int GetRoomCapacity(SchedulerOptions config, string roomId)

@@ -257,11 +257,15 @@ namespace SchedulePlanner.Core.Tests
                 },
                 Teachers = new List<Teacher>
                 {
-                    new Teacher { Id = "T1", FullName = "Teacher 1" }
+                    new Teacher { Id = "T1", FullName = "Teacher 1", PreferredRoom = "Room1" }
                 },
                 TeacherDepartments = new List<TeacherDepartment>
                 {
                     new TeacherDepartment { TeacherId = "T1", Department = "Math" }
+                },
+                Rooms = new List<Room>
+                {
+                    new Room { Id = "Room1", Capacity = 30 }
                 }
             };
 
@@ -315,11 +319,15 @@ namespace SchedulePlanner.Core.Tests
                 },
                 Teachers = new List<Teacher>
                 {
-                    new Teacher { Id = "T1", FullName = "Teacher 1" }
+                    new Teacher { Id = "T1", FullName = "Teacher 1", PreferredRoom = "Room1" }
                 },
                 TeacherDepartments = new List<TeacherDepartment>
                 {
                     new TeacherDepartment { TeacherId = "T1", Department = "Math" }
+                },
+                Rooms = new List<Room>
+                {
+                    new Room { Id = "Room1", Capacity = 30 }
                 }
             };
 
@@ -373,11 +381,15 @@ namespace SchedulePlanner.Core.Tests
                 },
                 Teachers = new List<Teacher>
                 {
-                    new Teacher { Id = "T1", FullName = "Teacher 1" }
+                    new Teacher { Id = "T1", FullName = "Teacher 1", PreferredRoom = "Room1" }
                 },
                 TeacherDepartments = new List<TeacherDepartment>
                 {
                     new TeacherDepartment { TeacherId = "T1", Department = "Math" }
+                },
+                Rooms = new List<Room>
+                {
+                    new Room { Id = "Room1", Capacity = 30 }
                 }
             };
 
@@ -431,8 +443,8 @@ namespace SchedulePlanner.Core.Tests
                 },
                 Teachers = new List<Teacher>
                 {
-                    new Teacher { Id = "T1", FullName = "Teacher 1" },
-                    new Teacher { Id = "T2", FullName = "Teacher 2" }
+                    new Teacher { Id = "T1", FullName = "Teacher 1", PreferredRoom = "Room1" },
+                    new Teacher { Id = "T2", FullName = "Teacher 2", PreferredRoom = "Room1" }
                 },
                 TeacherDepartments = new List<TeacherDepartment>
                 {
@@ -442,6 +454,10 @@ namespace SchedulePlanner.Core.Tests
                 Streams = new List<ClassStream>
                 {
                     new ClassStream { Id = "S1", Size = 20 }
+                },
+                Rooms = new List<Room>
+                {
+                    new Room { Id = "Room1", Capacity = 30 }
                 }
             };
 

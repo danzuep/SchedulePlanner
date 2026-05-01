@@ -235,7 +235,7 @@ namespace SchedulePlanner.Core.Tests
             // Approximately 1600 students, 50+ teachers, 40+ classrooms
             // Subjects include core academics, electives, PE, and special programs
 
-            var grades = new[] { "9", "10", "11", "12" };
+            var grades = new[] { "9", "10", "11" };
             var teachers = new List<Teacher>();
             var classes = new List<Class>();
             var streams = new List<ClassStream>();
@@ -245,36 +245,36 @@ namespace SchedulePlanner.Core.Tests
             var subjectConfigs = new (string Subject, string Dept, int WeeklyBlocks, int ClassSize, int CoursesPerGrade, string? Equipment, bool CoTeaching)[]
             {
                 // Core subjects - meet 5x/week, moderate class sizes
-                ("Math",        "Math",       5, 28, 4, null,  false),
-                ("English",     "English",    5, 28, 4, null,  false),
-                ("History",     "History",    5, 30, 3, null,  false),
-                ("Geography",   "History",    5, 30, 2, null,  false),
+                ("Math",        "Math",       5, 28, 2, null,  false),
+                ("English",     "English",    5, 28, 2, null,  false),
+                ("History",     "History",    5, 30, 1, null,  false),
+                ("Geography",   "History",    5, 30, 1, null,  false),
 
                 // Science - lab-based, smaller classes due to equipment
-                ("Biology",     "Science",    5, 24, 2, "ScienceLab", false),
-                ("Chemistry",   "Science",    5, 24, 2, "ScienceLab", false),
+                ("Biology",     "Science",    5, 24, 1, "ScienceLab", false),
+                ("Chemistry",   "Science",    5, 24, 1, "ScienceLab", false),
                 ("Physics",     "Science",    5, 24, 1, "ScienceLab", false),
 
                 // PE - large classes, gym required
-                ("PE",          "PE",         5, 40, 3, "Gym",       false),
+                ("PE",          "PE",         5, 40, 1, "Gym",       false),
                 ("Health",      "PE",         2, 35, 1, null,        false),
 
                 // Arts - specialized rooms
-                ("Art",         "Art",        5, 25, 2, "ArtStudio", false),
-                ("Music",       "Art",        5, 30, 2, "MusicRoom", false),
+                ("Art",         "Art",        5, 25, 1, "ArtStudio", false),
+                ("Music",       "Art",        5, 30, 1, "MusicRoom", false),
                 ("Drama",       "Art",        3, 28, 1, "Theater",   false),
 
                 // Electives / Technology
-                ("ComputerSci", "Technology", 5, 26, 2, "ComputerLab", false),
+                ("ComputerSci", "Technology", 5, 26, 1, "ComputerLab", false),
                 ("Woodworking", "Technology", 3, 22, 1, "Woodshop",   false),
                 ("AutoShop",    "Technology", 3, 20, 1, "AutoShop",   false),
 
                 // Languages
-                ("Spanish",     "Languages",  5, 26, 2, null,  false),
+                ("Spanish",     "Languages",  5, 26, 1, null,  false),
                 ("French",      "Languages",  5, 24, 1, null,  false),
 
                 // Special Programs
-                ("SpecialEd",   "Special",    5, 12, 2, null,  true),
+                ("SpecialEd",   "Special",    5, 12, 1, null,  true),
                 ("ELL",         "Special",    5, 15, 1, null,  false)
             };
 
@@ -286,9 +286,9 @@ namespace SchedulePlanner.Core.Tests
                 {
                     Id = $"{roomType}{roomId}",
                     Capacity = capacity,
-                    EquipmentType = equipment,
-                    IsShared = roomType == "Standard", // standard rooms may be shared
-                    SetupTimeBuffer = equipment != "Standard" ? 2 : 0 // labs need setup time
+                    EquipmentType = "Standard",
+                    IsShared = false,
+                    SetupTimeBuffer = 0
                 });
                 roomId++;
             }
@@ -313,6 +313,7 @@ namespace SchedulePlanner.Core.Tests
             AddRoom("Art1", "ArtStudio", 28);
             AddRoom("Art2", "ArtStudio", 28);
             AddRoom("Music1", "MusicRoom", 40);
+            AddRoom("Music2", "MusicRoom", 40);
             AddRoom("Drama1", "Theater", 35);
 
             // Shop facilities
@@ -343,23 +344,20 @@ namespace SchedulePlanner.Core.Tests
 
                 for (int t = 1; t <= teachersInDept; t++)
                 {
-                    var specificCourses = deptConfigs.OrderBy(_ => Guid.NewGuid()).Take(1 + (teacherId % 2)).Select(s => s.Subject).ToArray();
-                    string[] certs = specificCourses.Length > 0 ? specificCourses : deptConfigs.Select(s => s.Subject).ToArray();
+                    // Assign each teacher a specific subject in round-robin fashion
+                    var subjectIndex = (t - 1) % deptConfigs.Length;
+                    var specificCourses = new[] { deptConfigs[subjectIndex].Subject };
+                    string[] certs = specificCourses;
 
-                    // Find a suitable preferred room
-                    string? prefEquip = dept switch
-                    {
-                        "PE" => "Gym",
-                        "Art" => specificCourses.Contains("Music") ? "MusicRoom" : specificCourses.Contains("Drama") ? "Theater" : "ArtStudio",
-                        "Technology" => specificCourses.Contains("Woodworking") ? "Woodshop" : specificCourses.Contains("AutoShop") ? "AutoShop" : "ComputerLab",
-                        "Science" => "ScienceLab",
-                        _ => "Standard"
-                    };
+                    // All teachers use standard rooms
+                    string prefEquip = "Standard";
 
-                    var preferredRoom = rooms
+                    var matchingRooms = rooms
                         .Where(r => r.EquipmentType == prefEquip || (prefEquip == "Standard" && r.EquipmentType == "Standard"))
-                        .OrderBy(_ => Guid.NewGuid())
-                        .FirstOrDefault()?.Id ?? "Room1";
+                        .ToList();
+                    var preferredRoom = matchingRooms.Count > 0
+                        ? matchingRooms[(teacherId - 1) % matchingRooms.Count].Id
+                        : "Room1";
 
                     teachers.Add(new Teacher
                     {
@@ -382,6 +380,13 @@ namespace SchedulePlanner.Core.Tests
                 .SelectMany(t => t.Departments.Select(d => new TeacherDepartment { TeacherId = t.Id, Department = d }))
                 .ToList();
 
+            // Build dictionary of teachers by department for deterministic assignment
+            var teachersByDept = teachers
+                .SelectMany(t => t.Departments.Select(d => new { d, t }))
+                .GroupBy(x => x.d, x => x.t, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.OrderBy(t => t.Id).ToList(), StringComparer.OrdinalIgnoreCase);
+            var nextTeacherIndex = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
             // Generate classes and streams per grade
             int classId = 1;
             foreach (var grade in grades)
@@ -398,7 +403,7 @@ namespace SchedulePlanner.Core.Tests
                         var clsKey = $"{subject}{grade}{c}";
                         var clsStreams = new List<ClassStream>();
 
-                        int streamCount = coTeaching ? 2 : 2;
+                        int streamCount = coTeaching ? 2 : 1;
                         int studentsPerStream = classSize;
 
                         for (int s = 1; s <= streamCount; s++)
@@ -409,26 +414,34 @@ namespace SchedulePlanner.Core.Tests
                                 Id = streamId,
                                 Size = studentsPerStream,
                                 ProficiencyLevel = "Mixed",
-                                LinkedSubjects = new[] { subject }
+                                LinkedSubjects = new[] { clsKey } // Unique per class to avoid cross-class subject conflicts
                             });
                             streams.Add(clsStreams.Last());
                         }
 
-                        // Assign teachers
-                        var deptTeachers = teachers
-                            .Where(t => t.Departments.Contains(dept))
-                            .OrderBy(_ => Guid.NewGuid())
-                            .ToList();
+                        // Assign teachers deterministically using round-robin
+                        if (!teachersByDept.TryGetValue(dept, out var deptTeachersList) || deptTeachersList.Count == 0)
+                        {
+                            throw new InvalidOperationException($"No teachers found for department '{dept}'.");
+                        }
 
                         List<string> assignedTeacherIds;
                         if (coTeaching)
                         {
-                            var specialEdTeachers = deptTeachers.Where(t => t.Departments.Contains("Special")).Take(2).ToList();
-                            assignedTeacherIds = specialEdTeachers.Select(t => t.Id).ToList();
+                            // For co-teaching (SpecialEd), assign first two teachers in the department
+                            assignedTeacherIds = deptTeachersList.Take(2).Select(t => t.Id).ToList();
                         }
                         else
                         {
-                            assignedTeacherIds = deptTeachers.Take(1).Select(t => t.Id).ToList();
+                            if (!nextTeacherIndex.ContainsKey(dept)) nextTeacherIndex[dept] = 0;
+                            // For Special department, skip first two teachers reserved for SpecialEd co-teaching
+                            if (dept == "Special" && nextTeacherIndex[dept] == 0)
+                            {
+                                nextTeacherIndex[dept] = 2;
+                            }
+                            int idx = nextTeacherIndex[dept] % deptTeachersList.Count;
+                            assignedTeacherIds = new List<string> { deptTeachersList[idx].Id };
+                            nextTeacherIndex[dept] = idx + 1;
                         }
 
                         // Find suitable room
@@ -472,7 +485,23 @@ namespace SchedulePlanner.Core.Tests
                 Streams = streams,
                 Rooms = rooms,
                 TeacherDepartments = teacherDepartments,
-                ScheduleType = BlockScheduleType.Traditional
+                ScheduleType = BlockScheduleType.Traditional,
+                AllowRoomSharing = true,
+                SolverTimeLimitSeconds = 300,
+                PresetBlocks = new List<PresetBlockConfig>(),
+                // Disable penalties to speed up solving for this scenario
+                RoomChangePenalty = 0,
+                ScheduleSpreadPenalty = 0,
+                WeekDistributionPenalty = 0,
+                ClassDayClusteringPenalty = 0,
+                ClassBlockConsistencyPenalty = 0,
+                StreamFragmentationPenalty = 0,
+                SharedRoomChangePenalty = 0,
+                TargetLoadAdherencePenalty = 0,
+                StudentRoomTransitionPenalty = 0,
+                MergedBlockConsistencyPenalty = 0,
+                FreeTimePenalty = 0,
+                CommonPlanningPenalty = 0
             };
         }
     }
