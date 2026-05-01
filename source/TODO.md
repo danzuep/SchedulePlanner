@@ -7,7 +7,7 @@
 
 ## General Improvements
 - [x] Use system diagnostics activity and metrics for OpenTelemetry-compatible diagnostics
-- [ ] Support hybrid schedules (mix of traditional and block periods)
+- [x] Support hybrid schedules (mix of traditional and block periods)
   - [x] Extend SchedulerOptions with DayConfigs (per day blocks, merged blocks)
   - [x] Update SchedulingContext to handle variable blocks per day
   - [x] Modify decision variables to be jagged array [day][block]
