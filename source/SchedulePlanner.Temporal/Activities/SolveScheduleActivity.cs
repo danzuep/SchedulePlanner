@@ -1,24 +1,10 @@
-using System;
-using System.Diagnostics;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging.Abstractions;
-using Temporalio.Activities;
+using Microsoft.Extensions.Options;
 using SchedulePlanner.Core;
-using Google.OrTools.Sat;
+using Temporalio.Activities;
 
 namespace SchedulePlanner.Temporal.Activities;
-
-/// <summary>
-/// Activity for executing the CP-SAT solver with progress reporting and cancellation support.
-/// </summary>
-public interface ISolveScheduleActivity
-{
-    [Activity(nameof(SolveAsync))]
-    Task<ScheduleResult> SolveAsync(SchedulerOptions config, string workflowId);
-}
 
 /// <summary>
 /// Implementation of the scheduling solver activity.
@@ -27,7 +13,7 @@ public sealed class SolveScheduleActivity : ISolveScheduleActivity, IDisposable
 {
     private readonly ILogger<SolveScheduleActivity> _logger;
     private CancellationTokenSource? _cancellationTokenSource;
-    private Core.SolverProgress? _latestProgress; // accessed from multiple threads
+    private SolverProgress? _latestProgress; // accessed from multiple threads
 
     public SolveScheduleActivity(ILogger<SolveScheduleActivity> logger)
     {
@@ -63,7 +49,7 @@ public sealed class SolveScheduleActivity : ISolveScheduleActivity, IDisposable
             {
                 try
                 {
-                    ActivityExecutionContext.Current.Heartbeat(_latestProgress is not null ? new object[] { _latestProgress } : new object[] { new { message = "Solving..." } });
+                    ActivityExecutionContext.Current.Heartbeat(_latestProgress is null ? [new { message = "Solving..." }] : [_latestProgress]);
                 }
                 catch (Exception ex)
                 {

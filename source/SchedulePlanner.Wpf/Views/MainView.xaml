@@ -1,17 +1,74 @@
 ﻿<UserControl x:Class="SchedulePlanner.Wpf.Views.MainView"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+              xmlns:syncfusion="http://schemas.syncfusion.com/wpf">
     <Grid Background="{StaticResource AppBackgroundBrush}">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="760" />
-            <ColumnDefinition Width="*" />
-        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
 
-        <ScrollViewer Grid.Column="1"
+        <!-- Schedule Timeline / Calendar View -->
+        <Border Style="{StaticResource CardStyle}"
+                Grid.Row="0"
+                Padding="20"
+                Margin="24,24,24,16">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                    <TextBlock Text="Schedule Timeline"
+                               FontSize="18"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource PrimaryTextBrush}" />
+                    <Border Background="#E2E8F0"
+                            CornerRadius="12"
+                            Padding="6,2"
+                            Margin="12,0,0,0">
+                        <TextBlock Text="Syncfusion Ready"
+                                   FontSize="10"
+                                   FontWeight="Medium"
+                                   Foreground="#0369A1" />
+                    </Border>
+                </StackPanel>
+                <TextBlock Text="Timeline view for teachers, classrooms, and streams. Generated schedules can be visualized using Syncfusion SfSchedule with drag-and-drop, timeline views, and resource allocation."
+                           Foreground="#4B5563"
+                           FontSize="12"
+                           TextWrapping="Wrap"
+                           Margin="0,0,0,12" />
+                <Grid Height="180">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <Ellipse Width="10" Height="10" Fill="#10B981" Margin="0,0,6,0" VerticalAlignment="Center" />
+                        <TextBlock Text="Classes" FontSize="12" FontWeight="Medium" Foreground="{StaticResource PrimaryTextBrush}" Margin="0,0,24,0" />
+                        <Ellipse Width="10" Height="10" Fill="#3B82F6" Margin="0,0,6,0" VerticalAlignment="Center" />
+                        <TextBlock Text="Teachers" FontSize="12" FontWeight="Medium" Foreground="{StaticResource PrimaryTextBrush}" Margin="0,0,24,0" />
+                        <Ellipse Width="10" Height="10" Fill="#F59E0B" Margin="0,0,6,0" VerticalAlignment="Center" />
+                        <TextBlock Text="Rooms" FontSize="12" FontWeight="Medium" Foreground="{StaticResource PrimaryTextBrush}" Margin="0,0,24,0" />
+                        <Ellipse Width="10" Height="10" Fill="#8B5CF6" Margin="0,0,6,0" VerticalAlignment="Center" />
+                        <TextBlock Text="Streams" FontSize="12" FontWeight="Medium" Foreground="{StaticResource PrimaryTextBrush}" />
+                    </StackPanel>
+                    <Border Grid.Row="1" Height="1" Background="#E5E7EB" Margin="0,0,0,8" />
+                    <Grid Grid.Row="2">
+                        <TextBlock x:Name="ScheduleSummaryText"
+                                   Text="Generate or process a schedule to see timeline visualization."
+                                   Foreground="#9CA3AF"
+                                   FontSize="13"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center" />
+                    </Grid>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <ScrollViewer Grid.Row="1"
                       VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
-            <StackPanel Margin="24"
+            <StackPanel Margin="24,0,24,24"
                         HorizontalAlignment="Stretch">
 
                 <!-- Header -->
@@ -32,6 +89,71 @@
                     </StackPanel>
                 </Border>
 
+                <!-- Demo Data Card -->
+                <Border Style="{StaticResource CardStyle}"
+                        Padding="20"
+                        Margin="0,0,0,16">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontSize="14"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource PrimaryTextBrush}"
+                                       Text="Generate Synthetic Data" />
+                            <Border Background="#E0F2FE"
+                                    CornerRadius="6"
+                                    Padding="6,2,6,2"
+                                    Margin="8,0,0,0">
+                                <TextBlock Text="NEW"
+                                           FontSize="9"
+                                           FontWeight="Bold"
+                                           Foreground="#0284C7" />
+                            </Border>
+                        </StackPanel>
+                        <TextBlock Margin="0,6,0,14"
+                                   Foreground="{StaticResource SecondaryTextBrush}"
+                                   FontSize="12"
+                                   TextWrapping="Wrap"
+                                   Text="Generate a realistic large K12 school scheduling scenario with 1600+ students, 50+ teachers, 40+ classrooms, and multi-stream classes." />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Column="0"
+                                       Text="{Binding DemoInfoText}"
+                                       Foreground="#4B5563"
+                                       FontSize="12"
+                                       VerticalAlignment="Center" />
+
+                            <Button Grid.Column="1"
+                                    Command="{Binding GenerateLargeK12DemoCommand}"
+                                    IsEnabled="{Binding IsButtonEnabled}"
+                                    Height="36"
+                                    MinWidth="240"
+                                    Margin="0,0,12,0"
+                                    HorizontalAlignment="Left"
+                                    Background="#10B981"
+                                    Foreground="White"
+                                    BorderThickness="0"
+                                    Padding="16,0">
+                                <TextBlock Text="Generate Large K12 School Demo" />
+                            </Button>
+
+                            <Button Grid.Column="2"
+                                    Command="{Binding RunDemoScheduleCommand}"
+                                    Width="170"
+                                    Height="36"
+                                    Margin="16,0,0,0"
+                                    VerticalAlignment="Center"
+                                    Background="{StaticResource AccentBrush}">
+                                <TextBlock Text="Run Demo Schedule" />
+                            </Button>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
                 <!-- Download Card -->
                 <Border Style="{StaticResource CardStyle}"
                         Padding="20"
@@ -41,13 +163,11 @@
                                    FontWeight="SemiBold"
                                    Foreground="{StaticResource PrimaryTextBrush}"
                                    Text="Export Excel template" />
-
                         <TextBlock Margin="0,6,0,14"
                                    Foreground="{StaticResource SecondaryTextBrush}"
                                    FontSize="12"
                                    TextWrapping="Wrap"
                                    Text="Select where to save a demo schedule planner configuration template." />
-
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -95,13 +215,11 @@
                                    FontWeight="SemiBold"
                                    Foreground="{StaticResource PrimaryTextBrush}"
                                    Text="Import Excel configuration" />
-
                         <TextBlock Margin="0,6,0,14"
                                    Foreground="{StaticResource SecondaryTextBrush}"
                                    FontSize="12"
                                    TextWrapping="Wrap"
                                    Text="Select an Excel configuration workbook to process." />
-
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -154,7 +272,6 @@
                                    LineHeight="18" />
                     </StackPanel>
                 </Border>
-
             </StackPanel>
         </ScrollViewer>
     </Grid>

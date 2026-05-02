@@ -1,25 +1,10 @@
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Temporalio.Workflows;
-using Temporalio;
-using Temporalio.Common;
 using SchedulePlanner.Core;
 using SchedulePlanner.Temporal.Activities;
+using Temporalio.Common;
+using Temporalio.Workflows;
 
 namespace SchedulePlanner.Temporal.Workflows;
-
-/// <summary>
-/// Temporal workflow for reliable long-running scheduling with progress tracking,
-/// cancellation support, and incremental re-solving capabilities.
-/// </summary>
-[Workflow]
-public interface IScheduleWorkflow
-{
-    [WorkflowRun]
-    Task<ScheduleResult> RunScheduleAsync(SchedulerOptions config, string? workflowId = null);
-}
 
 /// <summary>
 /// Implementation of the schedule workflow.

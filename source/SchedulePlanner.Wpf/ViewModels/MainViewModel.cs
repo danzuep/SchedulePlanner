@@ -37,6 +37,19 @@ public partial class MainViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsButtonEnabled))]
     private bool isBusy;
 
+    [ObservableProperty]
+    private SchedulerOptions? demoOptions;
+    partial void OnDemoOptionsChanged(SchedulerOptions? value)
+    {
+        DemoInfoText = value == null 
+            ? "No demo data generated"
+            : $"{value.Teachers?.Count ?? 0} teachers, {value.Classes?.Count ?? 0} classes, {value.Rooms?.Count ?? 0} rooms";
+        RunDemoScheduleCommand.NotifyCanExecuteChanged();
+    }
+
+    [ObservableProperty]
+    private string demoInfoText = "No demo data generated";
+
     public bool IsButtonEnabled => !IsBusy;
 
     [RelayCommand]
@@ -58,9 +71,37 @@ public partial class MainViewModel : ObservableObject
             OutputWorkbookPath = selected;
     }
 
+    [RelayCommand]
+    private void GenerateLargeK12Demo()
+    {
+        StatusMessage = "Generating large K12 school demo data...";
+        try
+        {
+            DemoOptions = DemoDataFactory.CreateLargeK12SchoolDemo();
+            StatusMessage = $"Generated demo: {DemoOptions.Teachers.Count} teachers, {DemoOptions.Classes.Count} classes, {DemoOptions.Rooms.Count} rooms.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "Demo generation failed.";
+            _dialogService.ShowError("Error", ex.Message);
+        }
+    }
+
+    [RelayCommand]
+    private async Task RunDemoSchedule()
+    {
+        if (DemoOptions == null)
+        {
+            _dialogService.ShowMessage("No Demo", "Generate demo data first.");
+            return;
+        }
+        await RunScheduleForOptions(DemoOptions, "Demo");
+    }
+
     [RelayCommand(AllowConcurrentExecutions = false)]
     private async Task ExportWorkbookAsync()
     {
+        // ... rest remains the same
         if (string.IsNullOrWhiteSpace(OutputWorkbookPath))
             return;
         try
@@ -127,6 +168,55 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             StatusMessage = "Processing failed.";
+            _dialogService.ShowError("Error", ex.Message);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private async Task RunScheduleForOptions(SchedulerOptions options, string sourceLabel)
+    {
+        try
+        {
+            IsBusy = true;
+            StatusMessage = $"Running {sourceLabel} schedule...";
+
+            using var scope = _serviceScopeFactory.CreateScope();
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<SchedulingService>>();
+            var configValidator = scope.ServiceProvider.GetRequiredService<IConfigValidator>();
+            var classAssignmentBuilder = scope.ServiceProvider.GetRequiredService<IClassAssignmentBuilder>();
+            var constraintBuilder = scope.ServiceProvider.GetRequiredService<IConstraintBuilder>();
+            var optimizationBuilder = scope.ServiceProvider.GetRequiredService<IOptimizationBuilder>();
+            var resultBuilder = scope.ServiceProvider.GetRequiredService<IResultBuilder>();
+
+            var service = new SchedulingService(
+                Options.Create(options),
+                logger,
+                configValidator,
+                classAssignmentBuilder,
+                constraintBuilder,
+                optimizationBuilder,
+                resultBuilder,
+                null);
+
+            var result = await service.RunAsync();
+
+            StatusMessage = "Processing completed successfully.";
+
+            var exportService = scope.ServiceProvider.GetRequiredService<ExportService>();
+            var defaultPath = Path.GetFullPath(ImportExportOptions.Default.FilePath);
+            var filePath = await exportService.ExportAsync(result, defaultPath, addTimestamp: true);
+
+            StatusMessage = "Result written successfully.";
+            _dialogService.ShowMessage("Success", "Schedule planned successfully."
+                + Environment.NewLine + Environment.NewLine
+                + "Template written to " + filePath);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "Schedule failed.";
             _dialogService.ShowError("Error", ex.Message);
         }
         finally

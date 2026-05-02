@@ -14,6 +14,7 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.5" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.5" />
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.5" />
+    <PackageReference Include="Syncfusion.SfSchedule.WPF" Version="18.3.0.53" />
   </ItemGroup>
 
   <ItemGroup>
