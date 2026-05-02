@@ -35,7 +35,6 @@ public sealed class ScheduleWorkflow : IScheduleWorkflow
         logger.LogInformation("Starting schedule workflow. Config: {Days} days, {Blocks} blocks per day, {Classes} classes",
             config.Days.Count, config.BlocksPerDay, config.Classes.Count);
 
-        // Execute the solver activity with retry policy
         var retryPolicy = new RetryPolicy
         {
             InitialInterval = TimeSpan.FromSeconds(1),
