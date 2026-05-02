@@ -87,16 +87,17 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
-    private async Task RunDemoSchedule()
-    {
-        if (DemoOptions == null)
+        [RelayCommand]
+        private async Task RunDemoSchedule()
         {
-            _dialogService.ShowMessage("No Demo", "Generate demo data first.");
-            return;
+            if (DemoOptions == null)
+            {
+                // Auto-generate demo data if not already present
+                GenerateLargeK12Demo();
+                return;
+            }
+            await RunScheduleForOptions(DemoOptions, "Demo");
         }
-        await RunScheduleForOptions(DemoOptions, "Demo");
-    }
 
     [RelayCommand(AllowConcurrentExecutions = false)]
     private async Task ExportWorkbookAsync()
