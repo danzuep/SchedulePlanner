@@ -4,7 +4,7 @@
 <!-- - [ ] Support ordering classrooms by distance/time relative to student hubs, then the distance/time from those hubs to the next hub. -->
 
 ## Usability & Operational Features
-- [ ] Replace messy if statements with FluentValidation to define complex business rules for your school data
+- [x] Replace messy if statements with FluentValidation to define complex business rules for your school data
 - [ ] Improve the UI with Syncfusion or DevExpress (Scheduler Controls): These libraries offer dedicated "Scheduler" components for .NET (WPF, Blazor, or WinForms). They provide out-of-the-box support for drag-and-drop, "timeline views" for teachers, and "resource views" for classrooms.
 
 ## Temporal Integration
