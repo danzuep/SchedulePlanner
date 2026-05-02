@@ -30,8 +30,10 @@ public static partial class Program
         await service.RunAsync();
     }
 
-    private static async Task RunDemoScheduleAsync(string[] args)
+    public static async Task RunDemoScheduleAsync(string[] args = null)
     {
+        args ??= Array.Empty<string>();
+        
         using var host = Host.CreateDefaultBuilder()
             .InitialiseBuilderDefaults()
             .ConfigureServices((context, services) =>
@@ -45,7 +47,6 @@ public static partial class Program
         Console.WriteLine("Running demo schedule (Large K12 School)...");
 
         var options = DemoDataFactory.CreateLargeK12SchoolDemo();
-        var scheduler = host.Services.GetRequiredService<SchedulingService>();
 
         // Replace options in the service via a custom scope approach
         using var scope = host.Services.CreateScope();
@@ -98,6 +99,14 @@ public static partial class Program
         services.AddSingleton<ImportExportService>();
         services.AddSingleton<ExportService>();
         services.AddSingleton<ImportService>();
+
+        // Register scheduling service dependencies for Cli demo runs
+        services.AddSingleton<IConfigValidator, ConfigValidator>();
+        services.AddSingleton<IClassAssignmentBuilder, ClassAssignmentBuilder>();
+        services.AddSingleton<IConstraintBuilder, ConstraintBuilder>();
+        services.AddSingleton<IOptimizationBuilder, OptimizationBuilder>();
+        services.AddSingleton<IResultBuilder, ResultBuilder>();
+        services.AddSingleton<IScheduleLogger, ScheduleLogger>();
     }
 
     public static IHostBuilder InitialiseBuilderDefaults(this IHostBuilder builder, params string[] args)
