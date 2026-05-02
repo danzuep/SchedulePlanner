@@ -1,9 +1,8 @@
-﻿using Google.OrTools.Sat;
+﻿using System.Diagnostics;
+using Google.OrTools.Sat;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using System.Diagnostics;
-using System.Linq;
 
 namespace SchedulePlanner.Core
 {
@@ -418,8 +417,8 @@ namespace SchedulePlanner.Core
         IReadOnlyList<TeacherScheduleResult> TeacherSchedules,
         IReadOnlyList<ClassScheduleSummary> Classes,
         IReadOnlyList<RoomChangeResult> RoomChanges,
-        IReadOnlyList<RoomUtilization> RoomUtilizations = null,
-        IReadOnlyList<StreamScheduleResult> StreamSchedules = null);
+        IReadOnlyList<RoomUtilization>? RoomUtilizations = null,
+        IReadOnlyList<StreamScheduleResult>? StreamSchedules = null);
 
     public sealed record TeacherScheduleResult(
         string TeacherId,

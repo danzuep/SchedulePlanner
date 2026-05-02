@@ -61,21 +61,6 @@
                                 </Grid>
                             </StackPanel>
                         </Border>
-
-                        <!-- Action Card -->
-                        <Border Style="{StaticResource CardStyle}"
-                                Padding="20">
-                            <StackPanel>
-                                <TextBlock Text="Status"
-                                           FontWeight="SemiBold"
-                                           Foreground="{StaticResource PrimaryTextBrush}"
-                                           Margin="0,0,0,6" />
-                                <TextBlock Text="{Binding StatusMessage}"
-                                           Foreground="#4B5563"
-                                           TextWrapping="Wrap"
-                                           LineHeight="18" />
-                            </StackPanel>
-                        </Border>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
@@ -131,6 +116,22 @@
                                         <TextBlock Text="Run Demo Schedule" />
                                     </Button>
                                 </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Status Card -->
+                        <Border Style="{StaticResource CardStyle}"
+                                Padding="20"
+                                Margin="0,0,0,16">
+                            <StackPanel>
+                                <TextBlock Text="Status"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource PrimaryTextBrush}"
+                                           Margin="0,0,0,6" />
+                                <TextBlock Text="{Binding StatusMessage}"
+                                           Foreground="#4B5563"
+                                           TextWrapping="Wrap"
+                                           LineHeight="18" />
                             </StackPanel>
                         </Border>
 

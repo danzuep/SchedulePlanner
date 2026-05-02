@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,6 +9,7 @@ using SchedulePlanner.Core;
 using SchedulePlanner.ImportExport.Excel;
 using SchedulePlanner.Wpf.Helpers;
 using SchedulePlanner.Wpf.Services;
+using SchedulePlanner.Wpf.Views;
 
 namespace SchedulePlanner.Wpf.ViewModels;
 
@@ -87,22 +89,21 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-        [RelayCommand]
-        private async Task RunDemoSchedule()
+    [RelayCommand]
+    private async Task RunDemoSchedule()
+    {
+        if (DemoOptions == null)
         {
-            if (DemoOptions == null)
-            {
-                // Auto-generate demo data if not already present
-                GenerateLargeK12Demo();
-                return;
-            }
-            await RunScheduleForOptions(DemoOptions, "Demo");
+            // Auto-generate demo data if not already present
+            GenerateLargeK12Demo();
+            return;
         }
+        await RunScheduleForOptions(DemoOptions, "Demo");
+    }
 
     [RelayCommand(AllowConcurrentExecutions = false)]
     private async Task ExportWorkbookAsync()
     {
-        // ... rest remains the same
         if (string.IsNullOrWhiteSpace(OutputWorkbookPath))
             return;
         try
@@ -160,8 +161,6 @@ public partial class MainViewModel : ObservableObject
 
             StatusMessage = "Result written successfully.";
 
-            //var log = await schedulingLogger.ReadAllTextAsync();
-
             _dialogService.ShowMessage("Success", "Schedule planned successfully." +
                 Environment.NewLine + Environment.NewLine +
                 "Template written to " + filePath);
@@ -214,6 +213,9 @@ public partial class MainViewModel : ObservableObject
             _dialogService.ShowMessage("Success", "Schedule planned successfully."
                 + Environment.NewLine + Environment.NewLine
                 + "Template written to " + filePath);
+
+            // Update the schedule timeline display
+            UpdateScheduleSummary(result);
         }
         catch (Exception ex)
         {
@@ -223,6 +225,26 @@ public partial class MainViewModel : ObservableObject
         finally
         {
             IsBusy = false;
+        }
+    }
+
+    private void UpdateScheduleSummary(ScheduleResult result)
+    {
+        var summary = result.HasSolution
+            ? $"Solution found! {result.TeacherSchedules.Count} teachers, {result.Classes.Count} classes scheduled."
+            : $"No solution: {result.Status}";
+
+        var mainView = Application.Current?.Windows.OfType<MainWindow>().FirstOrDefault() as MainWindow;
+        if (mainView != null)
+        {
+            var mainControl = mainView.Content as MainView;
+            if (mainControl != null)
+            {
+                mainControl.Dispatcher.Invoke(() =>
+                {
+                    mainControl.ScheduleSummaryText.Text = summary;
+                });
+            }
         }
     }
 }

@@ -5,7 +5,7 @@ namespace SchedulePlanner.Cli.Tests
         [Test]
         public async Task Cli_AssemblyLoads()
         {
-            var type = typeof(SchedulePlanner.Cli.Program);
+            var type = typeof(Program);
             await Assert.That(type).IsNotNull();
         }
     }
