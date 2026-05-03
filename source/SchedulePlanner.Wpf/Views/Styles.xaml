@@ -1,5 +1,8 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                     xmlns:helpers="clr-namespace:SchedulePlanner.Wpf.Helpers">
+
+    <helpers:IsZeroConverter x:Key="IsZeroConverter" />
 
     <SolidColorBrush x:Key="AppBackgroundBrush" Color="#F3F4F6" />
     <SolidColorBrush x:Key="CardBackgroundBrush" Color="#FFFFFF" />
