@@ -30,24 +30,6 @@
         <Setter Property="Margin" Value="0,0,0,14" />
     </Style>
 
-    <Style TargetType="TextBox">
-        <Setter Property="MinHeight" Value="38" />
-        <Setter Property="Padding" Value="12,8" />
-        <Setter Property="BorderBrush" Value="{StaticResource FieldBorderBrush}" />
-        <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="Background" Value="White" />
-        <Setter Property="VerticalContentAlignment" Value="Center" />
-    </Style>
-
-    <Style TargetType="PasswordBox">
-        <Setter Property="MinHeight" Value="38" />
-        <Setter Property="Padding" Value="12,8" />
-        <Setter Property="BorderBrush" Value="{StaticResource FieldBorderBrush}" />
-        <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="Background" Value="White" />
-        <Setter Property="VerticalContentAlignment" Value="Center" />
-    </Style>
-
     <Style TargetType="Button">
         <Setter Property="MinHeight" Value="38" />
         <Setter Property="Padding" Value="16,8" />
@@ -79,4 +61,11 @@
         </Setter>
     </Style>
 
+    <Style x:Key="PrimaryButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="Background" Value="#2563EB" />
+        <Setter Property="Foreground" Value="White" />
+        <Setter Property="MinHeight" Value="36" />
+        <Setter Property="MinWidth" Value="120" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
 </ResourceDictionary>

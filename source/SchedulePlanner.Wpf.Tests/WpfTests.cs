@@ -33,10 +33,10 @@ public class WpfTests
             new DummyServiceScopeFactory());
 
         await Assert.That(vm.StatusMessage).IsEqualTo("Ready.");
-        await Assert.That(vm.ScheduleSummaryText).IsEqualTo("Generate or process a schedule to see timeline visualization.");
-        await Assert.That(vm.IsButtonEnabled).IsTrue();
+        await Assert.That(vm.IsBusy).IsFalse();
         await Assert.That(vm.TemporalStatus).IsEqualTo("Idle");
-        await Assert.That(vm.DemoInfoText).IsEqualTo("No demo data generated");
+        await Assert.That(vm.Settings).IsNotNull();
+        await Assert.That(vm.Results).IsNotNull();
     }
 
     [Test]
@@ -45,10 +45,9 @@ public class WpfTests
         var dialog = new TestDialogService();
         await Assert.That(dialog.SaveFile()).IsNull();
         await Assert.That(dialog.OpenFile()).IsNull();
-        // Just verify they don't throw
         dialog.ShowMessage("Test", "Message");
         dialog.ShowError("Test", "Error");
-        await Assert.That(true).IsTrue(); // Just getting here means no exceptions
+        await Assert.That(true).IsTrue();
     }
 
     [Test]

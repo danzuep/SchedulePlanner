@@ -13,7 +13,6 @@
     <PackageProjectUrl>https://github.com/danzuep/SchedulePlanner</PackageProjectUrl>
     <RepositoryUrl>https://github.com/danzuep/SchedulePlanner</RepositoryUrl>
     <RepositoryType>Git</RepositoryType>
-    <InvariantGlobalization>true</InvariantGlobalization>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <AccelerateBuildsInVisualStudio>true</AccelerateBuildsInVisualStudio>
     <UseVSTestIfAvailable>false</UseVSTestIfAvailable>
