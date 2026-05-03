@@ -11,7 +11,7 @@ namespace SchedulePlanner.Core.Tests
             var action = async () => await service.RunAsync();
 
             await Assert.That(action).ThrowsException()
-                .WithMessage("At least one class must be defined.");
+                .WithMessage("Configuration validation failed: At least one class must be defined.; At least one teacher must be defined.");
         }
 
         [Test]

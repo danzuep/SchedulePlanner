@@ -11,7 +11,8 @@ namespace SchedulePlanner.Core
             IReadOnlyList<RoomChangePenalty> penalties,
             SchedulerOptions config,
             CpSolver solver,
-            CpSolverStatus status);
+            CpSolverStatus status,
+            TimeSpan runDuration);
     }
 
     public sealed class ResultBuilder : IResultBuilder
@@ -22,7 +23,8 @@ namespace SchedulePlanner.Core
             IReadOnlyList<RoomChangePenalty> penalties,
             SchedulerOptions config,
             CpSolver solver,
-            CpSolverStatus status)
+            CpSolverStatus status,
+            TimeSpan runDuration)
         {
             var hasSolution = status is CpSolverStatus.Optimal or CpSolverStatus.Feasible;
 
@@ -149,7 +151,8 @@ namespace SchedulePlanner.Core
                 classSummaries,
                 roomChanges,
                 roomUtilizations,
-                streamSchedules);
+                streamSchedules,
+                runDuration);
         }
 
         private static IReadOnlyList<SummaryItem> ParseSolverStatistics(string stats)

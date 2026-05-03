@@ -1,10 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0-windows</TargetFramework>
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,10 +11,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SchedulePlanner.Core\SchedulePlanner.Core.csproj" />
-    <ProjectReference Include="..\SchedulePlanner.Wpf\SchedulePlanner.Wpf.csproj" />
-    <ProjectReference Include="..\SchedulePlanner.ImportExport\SchedulePlanner.ImportExport.csproj" />
-    <ProjectReference Include="..\SchedulePlanner.Worker\SchedulePlanner.Worker.csproj" />
-    <ProjectReference Include="..\SchedulePlanner.Cli\SchedulePlanner.Cli.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
   </ItemGroup>
 
 </Project>

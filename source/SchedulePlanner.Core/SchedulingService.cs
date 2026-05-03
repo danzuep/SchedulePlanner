@@ -160,7 +160,7 @@ namespace SchedulePlanner.Core
                 ? solver.Solve(context.Model, new ProgressCallback(progress, cancellationToken, _logger))
                 : solver.Solve(context.Model);
 
-            var result = _resultBuilder.BuildResult(context, variables, penalties, _config, solver, status);
+            var result = _resultBuilder.BuildResult(context, variables, penalties, _config, solver, status, stopwatch.Elapsed);
 
             _scheduleLogger.LogResult(result);
 
@@ -409,16 +409,17 @@ namespace SchedulePlanner.Core
         }
     }
 
-    public sealed record ScheduleResult(
-        string Status,
-        bool HasSolution,
-        double? ObjectiveValue,
-        IReadOnlyList<SummaryItem> SolverStatistics,
-        IReadOnlyList<TeacherScheduleResult> TeacherSchedules,
-        IReadOnlyList<ClassScheduleSummary> Classes,
-        IReadOnlyList<RoomChangeResult> RoomChanges,
-        IReadOnlyList<RoomUtilization>? RoomUtilizations = null,
-        IReadOnlyList<StreamScheduleResult>? StreamSchedules = null);
+     public sealed record ScheduleResult(
+         string Status,
+         bool HasSolution,
+         double? ObjectiveValue,
+         IReadOnlyList<SummaryItem> SolverStatistics,
+         IReadOnlyList<TeacherScheduleResult> TeacherSchedules,
+         IReadOnlyList<ClassScheduleSummary> Classes,
+         IReadOnlyList<RoomChangeResult> RoomChanges,
+         IReadOnlyList<RoomUtilization>? RoomUtilizations = null,
+         IReadOnlyList<StreamScheduleResult>? StreamSchedules = null,
+         TimeSpan? RunDuration = null);
 
     public sealed record TeacherScheduleResult(
         string TeacherId,

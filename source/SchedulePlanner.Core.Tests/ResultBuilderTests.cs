@@ -56,7 +56,7 @@ namespace SchedulePlanner.Core.Tests
             var resultBuilder = new ResultBuilder();
 
             var result = resultBuilder.BuildResult(
-                context, variables, new List<RoomChangePenalty>(), config, solver, CpSolverStatus.Unknown);
+                context, variables, new List<RoomChangePenalty>(), config, solver, CpSolverStatus.Unknown, TimeSpan.Zero);
 
             await Assert.That(result).IsNotNull();
             await Assert.That(result.HasSolution).IsFalse();
@@ -118,7 +118,7 @@ namespace SchedulePlanner.Core.Tests
             var resultBuilder = new ResultBuilder();
 
             var result = resultBuilder.BuildResult(
-                context, variables, new List<RoomChangePenalty>(), config, solver, status);
+                context, variables, new List<RoomChangePenalty>(), config, solver, status, TimeSpan.Zero);
 
             await Assert.That(result).IsNotNull();
             await Assert.That(result.HasSolution).IsTrue();
@@ -185,7 +185,7 @@ namespace SchedulePlanner.Core.Tests
             var resultBuilder = new ResultBuilder();
 
             var result = resultBuilder.BuildResult(
-                context, variables, new List<RoomChangePenalty>(), config, solver, status);
+                context, variables, new List<RoomChangePenalty>(), config, solver, status, TimeSpan.Zero);
 
             await Assert.That(result).IsNotNull();
             await Assert.That(result.HasSolution).IsTrue();

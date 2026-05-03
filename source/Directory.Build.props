@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<Project>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Authors>Daniel Collingwood</Authors>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageDescription>This package helps schools with timetabling.</PackageDescription>
+    <PackageProjectUrl>https://github.com/danzuep/SchedulePlanner</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/danzuep/SchedulePlanner</RepositoryUrl>
+    <RepositoryType>Git</RepositoryType>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <AccelerateBuildsInVisualStudio>true</AccelerateBuildsInVisualStudio>
+    <UseVSTestIfAvailable>false</UseVSTestIfAvailable>
+    <IsTrimmable>false</IsTrimmable>
+    <UseMSTest>true</UseMSTest>
+  </PropertyGroup>
+
+  <ItemGroup Condition="!$(MSBuildProjectName.EndsWith('.Tests'))">
+    <InternalsVisibleTo Include="$(AssemblyName).Tests" />
+  </ItemGroup>
+
+</Project>

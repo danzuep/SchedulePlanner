@@ -20,18 +20,18 @@ public sealed class SchedulerOptionsValidator : AbstractValidator<SchedulerOptio
         RuleFor(x => x.Teachers)
             .NotEmpty().WithMessage("At least one teacher must be defined.");
 
-        RuleFor(x => x.RoomChangePenalty).GreaterThanOrEqualTo(0).WithMessage("RoomChangePenalty must be non-negative.");
-        RuleFor(x => x.ScheduleSpreadPenalty).GreaterThanOrEqualTo(0).WithMessage("ScheduleSpreadPenalty must be non-negative.");
-        RuleFor(x => x.WeekDistributionPenalty).GreaterThanOrEqualTo(0).WithMessage("WeekDistributionPenalty must be non-negative.");
-        RuleFor(x => x.ClassDayClusteringPenalty).GreaterThanOrEqualTo(0).WithMessage("ClassDayClusteringPenalty must be non-negative.");
-        RuleFor(x => x.ClassBlockConsistencyPenalty).GreaterThanOrEqualTo(0).WithMessage("ClassBlockConsistencyPenalty must be non-negative.");
-        RuleFor(x => x.StreamFragmentationPenalty).GreaterThanOrEqualTo(0).WithMessage("StreamFragmentationPenalty must be non-negative.");
-        RuleFor(x => x.SharedRoomChangePenalty).GreaterThanOrEqualTo(0).WithMessage("SharedRoomChangePenalty must be non-negative.");
-        RuleFor(x => x.TargetLoadAdherencePenalty).GreaterThanOrEqualTo(0).WithMessage("TargetLoadAdherencePenalty must be non-negative.");
-        RuleFor(x => x.StudentRoomTransitionPenalty).GreaterThanOrEqualTo(0).WithMessage("StudentRoomTransitionPenalty must be non-negative.");
-        RuleFor(x => x.FreeTimePenalty).GreaterThanOrEqualTo(0).WithMessage("FreeTimePenalty must be non-negative.");
-        RuleFor(x => x.MergedBlockConsistencyPenalty).GreaterThanOrEqualTo(0).WithMessage("MergedBlockConsistencyPenalty must be non-negative.");
-        RuleFor(x => x.CommonPlanningPenalty).GreaterThanOrEqualTo(0).WithMessage("CommonPlanningPenalty must be non-negative.");
+        RuleFor(x => x.RoomChangePenalty).GreaterThanOrEqualTo(int.MinValue);
+        RuleFor(x => x.ScheduleSpreadPenalty).GreaterThanOrEqualTo(int.MinValue);
+        RuleFor(x => x.WeekDistributionPenalty).GreaterThanOrEqualTo(int.MinValue);
+        RuleFor(x => x.ClassDayClusteringPenalty).GreaterThanOrEqualTo(int.MinValue);
+        RuleFor(x => x.ClassBlockConsistencyPenalty).GreaterThanOrEqualTo(int.MinValue);
+        RuleFor(x => x.StreamFragmentationPenalty).GreaterThanOrEqualTo(int.MinValue);
+        RuleFor(x => x.SharedRoomChangePenalty).GreaterThanOrEqualTo(int.MinValue);
+        RuleFor(x => x.TargetLoadAdherencePenalty).GreaterThanOrEqualTo(int.MinValue);
+        RuleFor(x => x.StudentRoomTransitionPenalty).GreaterThanOrEqualTo(int.MinValue);
+        RuleFor(x => x.FreeTimePenalty).GreaterThanOrEqualTo(int.MinValue);
+        RuleFor(x => x.MergedBlockConsistencyPenalty).GreaterThanOrEqualTo(int.MinValue);
+        RuleFor(x => x.CommonPlanningPenalty).GreaterThanOrEqualTo(int.MinValue);
 
         RuleFor(x => x.Streams).NotNull();
         RuleForEach(x => x.Streams).SetValidator(new ClassStreamValidator());

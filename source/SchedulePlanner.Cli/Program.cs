@@ -30,7 +30,7 @@ public static partial class Program
         await service.RunAsync();
     }
 
-    public static async Task RunDemoScheduleAsync(string[] args = null)
+    public static async Task RunDemoScheduleAsync(string[]? args = null)
     {
         args ??= Array.Empty<string>();
         
@@ -41,57 +41,13 @@ public static partial class Program
                 Initialise(context, services);
                 services.AddScoped<IService<ScheduleResult>, SchedulingService>();
                 services.AddTransient<ImportService>();
+                services.AddScoped<DemoScheduleRunner>();
             })
             .Build();
 
-        Console.WriteLine("Running demo schedule (Large K12 School)...");
-
-        var options = DemoDataFactory.CreateLargeK12SchoolDemo();
-
-        // Replace options in the service via a custom scope approach
         using var scope = host.Services.CreateScope();
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<SchedulingService>>();
-        var configValidator = scope.ServiceProvider.GetRequiredService<IConfigValidator>();
-        var classAssignmentBuilder = scope.ServiceProvider.GetRequiredService<IClassAssignmentBuilder>();
-        var constraintBuilder = scope.ServiceProvider.GetRequiredService<IConstraintBuilder>();
-        var optimizationBuilder = scope.ServiceProvider.GetRequiredService<IOptimizationBuilder>();
-        var resultBuilder = scope.ServiceProvider.GetRequiredService<IResultBuilder>();
-
-        var service = new SchedulingService(
-            Microsoft.Extensions.Options.Options.Create(options),
-            logger,
-            configValidator,
-            classAssignmentBuilder,
-            constraintBuilder,
-            optimizationBuilder,
-            resultBuilder,
-            null);
-
-        var result = await service.RunAsync();
-
-        Console.WriteLine($"Solution found: {result.HasSolution}");
-        if (result.HasSolution)
-        {
-            Console.WriteLine($"Teachers scheduled: {result.TeacherSchedules.Count}");
-            Console.WriteLine($"Classes scheduled: {result.Classes.Count}");
-            if (result.StreamSchedules?.Count > 0)
-                Console.WriteLine($"Stream schedules: {result.StreamSchedules.Count}");
-
-            var exportService = scope.ServiceProvider.GetRequiredService<ExportService>();
-            var importExportConfig = ImportExportOptions.Default;
-            var filePath = await exportService.ExportAsync(result, importExportConfig.FilePath, addTimestamp: true);
-            Console.WriteLine($"Results exported to: {filePath}");
-
-            var icalPath = await exportService.ExportToICalAsync(result, importExportConfig.FilePath, addTimestamp: true);
-            Console.WriteLine($"iCal exported to: {icalPath}");
-
-            var csvPath = await exportService.ExportToCsvAsync(result, importExportConfig.FilePath, addTimestamp: true);
-            Console.WriteLine($"CSV exported to: {csvPath}");
-        }
-        else
-        {
-            Console.WriteLine($"No solution found. Status: {result.Status}");
-        }
+        var runner = scope.ServiceProvider.GetRequiredService<DemoScheduleRunner>();
+        await runner.RunAsync();
     }
 
     public static void Initialise(HostBuilderContext context, IServiceCollection services)

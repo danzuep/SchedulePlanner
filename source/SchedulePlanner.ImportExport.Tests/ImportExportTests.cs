@@ -1,3 +1,5 @@
+using SchedulePlanner.ImportExport.Excel;
+
 namespace SchedulePlanner.ImportExport.Tests
 {
     public class ImportExportTests
@@ -5,21 +7,21 @@ namespace SchedulePlanner.ImportExport.Tests
         [Test]
         public async Task ImportExport_AssemblyLoads()
         {
-            var type = typeof(SchedulePlanner.ImportExport.Excel.ImportExportService);
+            var type = typeof(ImportExportService);
             await Assert.That(type).IsNotNull();
         }
 
         [Test]
         public async Task ExcelReader_Exists()
         {
-            var type = typeof(SchedulePlanner.ImportExport.Excel.ExcelSchedulerConfigReader);
+            var type = typeof(ExcelSchedulerConfigReader);
             await Assert.That(type).IsNotNull();
         }
 
         [Test]
         public async Task ExcelWriter_Exists()
         {
-            var type = typeof(SchedulePlanner.ImportExport.Excel.ExcelSchedulerConfigWriter);
+            var type = typeof(ExcelSchedulerConfigWriter);
             await Assert.That(type).IsNotNull();
         }
     }
