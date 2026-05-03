@@ -8,144 +8,145 @@ public static class DemoDataFactory
     /// </summary>
     public static SchedulerOptions CreateLargeK12SchoolDemo()
     {
-        // Realistic large secondary school scenario (grades 9-12)
-        // Approximately 1600 students, 50+ teachers, 40+ classrooms
-        var grades = new[] { "9", "10", "11" };
-        var teachers = new List<Teacher>();
-        var classes = new List<Class>();
-        var streams = new List<ClassStream>();
-        var rooms = new List<Room>();
+         // Realistic large secondary school scenario (grades 9-12)
+         // Approximately 1600 students, 40 teachers, 35 classrooms
+         var grades = new[] { "9", "10", "11" };
+         var teachers = new List<Teacher>();
+         var classes = new List<Class>();
+         var streams = new List<ClassStream>();
+         var rooms = new List<Room>();
 
-        // Define subject configurations with realistic weekly blocks and class sizes
-        var subjectConfigs = new (string Subject, string Dept, int WeeklyBlocks, int ClassSize, int CoursesPerGrade, string? Equipment, bool CoTeaching)[]
-        {
-            // Core subjects - meet 5x/week, moderate class sizes
-            ("Math",        "Math",       5, 28, 2, null,  false),
-            ("English",     "English",    5, 28, 2, null,  false),
-            ("History",     "History",    5, 30, 1, null,  false),
-            ("Geography",   "History",    5, 30, 1, null,  false),
+         // Define subject configurations with realistic weekly blocks and class sizes
+         // Reduced blocks/week to make problem feasible within preset block constraints
+         var subjectConfigs = new (string Subject, string Dept, int WeeklyBlocks, int ClassSize, int CoursesPerGrade, string? Equipment, bool CoTeaching)[]
+         {
+             // Core subjects - meet 4x/week, moderate class sizes (reduced from 5)
+             ("Math",        "Math",       4, 28, 2, null,  false),
+             ("English",     "English",    4, 28, 2, null,  false),
+             ("History",     "History",    4, 30, 1, null,  false),
+             ("Geography",   "History",    4, 30, 1, null,  false),
 
-            // Science - lab-based, smaller classes due to equipment
-            ("Biology",     "Science",    5, 24, 1, "ScienceLab", false),
-            ("Chemistry",   "Science",    5, 24, 1, "ScienceLab", false),
-            ("Physics",     "Science",    5, 24, 1, "ScienceLab", false),
+             // Science - lab-based, smaller classes due to equipment
+             ("Biology",     "Science",    4, 24, 1, "ScienceLab", false),
+             ("Chemistry",   "Science",    4, 24, 1, "ScienceLab", false),
+             ("Physics",     "Science",    4, 24, 1, "ScienceLab", false),
 
-            // PE - large classes, gym required
-            ("PE",          "PE",         5, 40, 1, "Gym",       false),
-            ("Health",      "PE",         2, 35, 1, null,        false),
+             // PE - large classes, gym required
+             ("PE",          "PE",         4, 40, 1, "Gym",       false),
+             ("Health",      "PE",         2, 35, 1, null,        false),
 
-            // Arts - specialized rooms
-            ("Art",         "Art",        5, 25, 1, "ArtStudio", false),
-            ("Music",       "Art",        5, 30, 1, "MusicRoom", false),
-            ("Drama",       "Art",        3, 28, 1, "Theater",   false),
+             // Arts - specialized rooms
+             ("Art",         "Art",        4, 25, 1, "ArtStudio", false),
+             ("Music",       "Art",        4, 30, 1, "MusicRoom", false),
+             ("Drama",       "Art",        3, 28, 1, "Theater",   false),
 
-            // Electives / Technology
-            ("ComputerSci", "Technology", 5, 26, 1, "ComputerLab", false),
-            ("Woodworking", "Technology", 3, 22, 1, "Woodshop",   false),
-            ("AutoShop",    "Technology", 3, 20, 1, "AutoShop",   false),
+             // Electives / Technology
+             ("ComputerSci", "Technology", 4, 26, 1, "ComputerLab", false),
+             ("Woodworking", "Technology", 3, 22, 1, "Woodshop",   false),
+             ("AutoShop",    "Technology", 3, 20, 1, "AutoShop",   false),
 
-            // Languages
-            ("Spanish",     "Languages",  5, 26, 1, null,  false),
-            ("French",      "Languages",  5, 24, 1, null,  false),
+             // Languages
+             ("Spanish",     "Languages",  4, 26, 1, null,  false),
+             ("French",      "Languages",  4, 24, 1, null,  false),
 
-            // Special Programs
-            ("SpecialEd",   "Special",    5, 12, 1, null,  true),
-            ("ELL",         "Special",    5, 15, 1, null,  false)
-        };
+             // Special Programs
+             ("SpecialEd",   "Special",    4, 12, 1, null,  true),
+             ("ELL",         "Special",    4, 15, 1, null,  false)
+         };
 
-        int roomId = 1;
-        void AddRoom(string roomType, string equipment, int capacity)
-        {
-            rooms.Add(new Room
-            {
-                Id = $"{roomType}{roomId}",
-                Capacity = capacity,
-                EquipmentType = "Standard",
-                IsShared = false,
-                SetupTimeBuffer = 0
-            });
-            roomId++;
-        }
+         int roomId = 1;
+         void AddRoom(string roomType, string equipment, int capacity)
+         {
+             rooms.Add(new Room
+             {
+                 Id = $"{roomType}{roomId}",
+                 Capacity = capacity,
+                 EquipmentType = equipment,
+                 IsShared = false,
+                 SetupTimeBuffer = 0
+             });
+             roomId++;
+         }
 
-        // Standard classrooms (40 rooms)
-        for (int i = 1; i <= 40; i++)
-            AddRoom("Room", "Standard", 32);
+         // Standard classrooms (35 rooms, slightly reduced)
+         for (int i = 1; i <= 35; i++)
+             AddRoom("Room", "Standard", 32);
 
-        // Science labs (6 labs, 24 capacity each)
-        for (int i = 1; i <= 6; i++)
-            AddRoom("Lab", "ScienceLab", 24);
+         // Science labs (4 labs, reduced from 6)
+         for (int i = 1; i <= 4; i++)
+             AddRoom("Lab", "ScienceLab", 24);
 
-        // Computer labs (3 labs, 26 capacity)
-        for (int i = 1; i <= 3; i++)
-            AddRoom("CompLab", "ComputerLab", 26);
+         // Computer labs (2 labs, reduced from 3)
+         for (int i = 1; i <= 2; i++)
+             AddRoom("CompLab", "ComputerLab", 26);
 
-        // PE/gym facilities (2 gyms, 60 capacity)
-        AddRoom("GymA", "Gym", 60);
-        AddRoom("GymB", "Gym", 60);
+         // PE/gym facilities
+         AddRoom("GymA", "Gym", 60);
+         AddRoom("GymB", "Gym", 60);
 
-        // Arts spaces
-        AddRoom("Art1", "ArtStudio", 28);
-        AddRoom("Art2", "ArtStudio", 28);
-        AddRoom("Music1", "MusicRoom", 40);
-        AddRoom("Music2", "MusicRoom", 40);
-        AddRoom("Drama1", "Theater", 35);
+         // Arts spaces
+         AddRoom("Art1", "ArtStudio", 28);
+         AddRoom("Art2", "ArtStudio", 28);
+         AddRoom("Music1", "MusicRoom", 40);
+         AddRoom("Music2", "MusicRoom", 40);
+         AddRoom("Drama1", "Theater", 35);
 
-        // Shop facilities
-        AddRoom("Woodshop1", "Woodshop", 22);
-        AddRoom("Autoshop1", "AutoShop", 20);
+         // Shop facilities
+         AddRoom("Woodshop1", "Woodshop", 22);
+         AddRoom("Autoshop1", "AutoShop", 20);
 
-        // Generate teachers with specific course certifications
-        int teacherId = 1;
-        string[] allDepts = subjectConfigs.Select(s => s.Dept).Distinct().ToArray();
+         // Generate teachers with specific course certifications
+         int teacherId = 1;
+         string[] allDepts = subjectConfigs.Select(s => s.Dept).Distinct().ToArray();
 
-        // Create specialized teachers per department
-        foreach (var dept in allDepts)
-        {
-            var deptConfigs = subjectConfigs.Where(s => s.Dept == dept).ToArray();
-            int teachersInDept = dept switch
-            {
-                "Math" => 12,
-                "English" => 12,
-                "Science" => 12,
-                "History" => 8,
-                "PE" => 8,
-                "Art" => 6,
-                "Technology" => 6,
-                "Languages" => 4,
-                "Special" => 6,
-                _ => 3
-            };
+         // Create specialized teachers per department (slightly reduced)
+         foreach (var dept in allDepts)
+         {
+             var deptConfigs = subjectConfigs.Where(s => s.Dept == dept).ToArray();
+             int teachersInDept = dept switch
+             {
+                 "Math" => 10,
+                 "English" => 10,
+                 "Science" => 8,
+                 "History" => 6,
+                 "PE" => 6,
+                 "Art" => 4,
+                 "Technology" => 4,
+                 "Languages" => 3,
+                 "Special" => 4,
+                 _ => 3
+             };
 
-            for (int t = 1; t <= teachersInDept; t++)
-            {
-                var subjectIndex = (t - 1) % deptConfigs.Length;
-                var specificCourses = new[] { deptConfigs[subjectIndex].Subject };
-                string[] certs = specificCourses;
+             for (int t = 1; t <= teachersInDept; t++)
+             {
+                 var subjectIndex = (t - 1) % deptConfigs.Length;
+                 var specificCourses = new[] { deptConfigs[subjectIndex].Subject };
+                 string[] certs = specificCourses;
 
-                string prefEquip = "Standard";
+                 string prefEquip = "Standard";
 
-                var matchingRooms = rooms
-                    .Where(r => r.EquipmentType == prefEquip || (prefEquip == "Standard" && r.EquipmentType == "Standard"))
-                    .ToList();
-                var preferredRoom = matchingRooms.Count > 0
-                    ? matchingRooms[(teacherId - 1) % matchingRooms.Count].Id
-                    : "Room1";
+                 var matchingRooms = rooms
+                     .Where(r => r.EquipmentType == prefEquip || (prefEquip == "Standard" && r.EquipmentType == "Standard"))
+                     .ToList();
+                 var preferredRoom = matchingRooms.Count > 0
+                     ? matchingRooms[(teacherId - 1) % matchingRooms.Count].Id
+                     : "Room1";
 
-                teachers.Add(new Teacher
-                {
-                    Id = $"T{teacherId}",
-                    FullName = $"Teacher {teacherId}",
-                    Email = $"teacher{teacherId}@school.edu",
-                    PreferredRoom = preferredRoom,
-                    Departments = new[] { dept },
-                    TargetLoadBlocks = 25,
-                    IsPartTime = teacherId % 10 == 0,
-                    Certifications = certs,
-                    MaxConsecutiveBlocks = 4
-                });
-                teacherId++;
-            }
-        }
+                 teachers.Add(new Teacher
+                 {
+                     Id = $"T{teacherId}",
+                     FullName = $"Teacher {teacherId}",
+                     Email = $"teacher{teacherId}@school.edu",
+                     PreferredRoom = preferredRoom,
+                     Departments = new[] { dept },
+                     TargetLoadBlocks = 20,
+                     IsPartTime = teacherId % 10 == 0,
+                     Certifications = certs,
+                     MaxConsecutiveBlocks = 4
+                 });
+                 teacherId++;
+             }
+         }
 
         // Build teacher-department mapping
         var teacherDepartments = teachers
@@ -159,20 +160,21 @@ public static class DemoDataFactory
             .ToDictionary(g => g.Key, g => g.OrderBy(t => t.Id).ToList(), StringComparer.OrdinalIgnoreCase);
         var nextTeacherIndex = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
-        // Generate classes and streams per grade
-        int classId = 1;
-        foreach (var grade in grades)
-        {
-            foreach (var (subject, dept, weeklyBlocks, classSize, coursesPerGrade, equipment, coTeaching) in subjectConfigs)
-            {
-                // Grade-level restrictions
-                if (subject == "Physics" && (grade == "9" || grade == "10")) continue;
-                if (subject == "AutoShop" && (grade == "9" || grade == "12")) continue;
-                if (subject == "Drama" && (grade == "11" || grade == "12")) continue;
+         // Generate classes and streams per grade (reduced courses per grade for feasibility)
+         int classId = 1;
+         foreach (var grade in grades)
+         {
+             foreach (var (subject, dept, weeklyBlocks, classSize, coursesPerGrade, equipment, coTeaching) in subjectConfigs)
+             {
+                 // Grade-level restrictions
+                 if (subject == "Physics" && (grade == "9" || grade == "10")) continue;
+                 if (subject == "AutoShop" && (grade == "9" || grade == "12")) continue;
+                 if (subject == "Drama" && (grade == "11" || grade == "12")) continue;
 
-                for (int c = 1; c <= coursesPerGrade; c++)
-                {
-                    var clsKey = $"{subject}{grade}{c}";
+                 int actualCourses = Math.Min(coursesPerGrade, dept == "Math" || dept == "English" ? 1 : coursesPerGrade);
+                 for (int c = 1; c <= actualCourses; c++)
+                 {
+                     var clsKey = $"{subject}{grade}{c}";
                     var clsStreams = new List<ClassStream>();
 
                     int streamCount = coTeaching ? 2 : 1;
