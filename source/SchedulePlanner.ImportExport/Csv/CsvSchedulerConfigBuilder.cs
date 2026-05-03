@@ -1,14 +1,11 @@
 ﻿namespace SchedulePlanner.ImportExport.Csv;
 
 using System.Globalization;
-using System.Text;
 using System.IO.Abstractions;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
+using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SchedulePlanner.Core;
-using SchedulePlanner.ImportExport.Excel;
 
 public sealed record CsvOptions
 {

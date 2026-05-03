@@ -3,7 +3,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SchedulePlanner.ImportExport;
-using SchedulePlanner.ImportExport.Excel;
 using SchedulePlanner.Wpf.Services;
 using SchedulePlanner.Wpf.ViewModels;
 

@@ -3,9 +3,12 @@ using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using SchedulePlanner.Cli;
 using SchedulePlanner.Core;
+using SchedulePlanner.ImportExport;
 using SchedulePlanner.ImportExport.Excel;
 using SchedulePlanner.Wpf.Helpers;
 using SchedulePlanner.Wpf.Services;
@@ -98,7 +101,11 @@ public partial class MainViewModel : ObservableObject
             GenerateLargeK12Demo();
             return;
         }
-        await RunScheduleForOptions(DemoOptions, "Demo");
+        //await RunScheduleForOptions(DemoOptions, "Demo");
+
+        using var scope = _serviceScopeFactory.CreateScope();
+        var runner = scope.ServiceProvider.GetRequiredService<DemoScheduleRunner>();
+        await runner.RunAsync(); // SolverProgress
     }
 
     [RelayCommand(AllowConcurrentExecutions = false)]
@@ -114,7 +121,7 @@ public partial class MainViewModel : ObservableObject
             using var scope = _serviceScopeFactory.CreateScope();
             var service = scope.ServiceProvider.GetRequiredService<ExportService>();
             var config = scope.ServiceProvider.GetRequiredService<IOptionsSnapshot<SchedulerOptions>>();
-            await service.ExportAsync(config.Value, OutputWorkbookPath);
+            await service.ExportTemplateAsync(config.Value, OutputWorkbookPath);
 
             StatusMessage = "Export completed successfully.";
 
@@ -157,7 +164,7 @@ public partial class MainViewModel : ObservableObject
             StatusMessage = "Processing completed successfully.";
 
             var service = scope.ServiceProvider.GetRequiredService<ExportService>();
-            var filePath = await service.ExportAsync(result, options.FilePath, addTimestamp: true);
+            var filePath = await service.ExportToExcelAsync(result, options.FilePath);
 
             StatusMessage = "Result written successfully.";
 
@@ -207,7 +214,7 @@ public partial class MainViewModel : ObservableObject
 
             var exportService = scope.ServiceProvider.GetRequiredService<ExportService>();
             var defaultPath = Path.GetFullPath(ImportExportOptions.Default.FilePath);
-            var filePath = await exportService.ExportAsync(result, defaultPath, addTimestamp: true);
+            var filePath = await exportService.ExportToExcelAsync(result, defaultPath);
 
             StatusMessage = "Result written successfully.";
             _dialogService.ShowMessage("Success", "Schedule planned successfully."

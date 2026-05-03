@@ -26,7 +26,7 @@ namespace SchedulePlanner.ImportExport.Excel
             _logger.LogDebug("Exporting template...");
             var exportService = provider.GetRequiredService<ExportService>();
             var schedulerOptions = provider.GetRequiredService<IOptionsSnapshot<SchedulerOptions>>().Value;
-            var configFile = await exportService.ExportAsync(schedulerOptions, importExportOptions.FilePath);
+            var configFile = await exportService.ExportTemplateAsync(schedulerOptions, importExportOptions.FilePath);
             _logger.LogDebug("Export completed successfully.");
 
             _logger.LogDebug("Processing workbook...");
@@ -37,7 +37,7 @@ namespace SchedulePlanner.ImportExport.Excel
             var importService = new ImportService(reader, schedulingLogger);
             var result = await importService.RunAsync(cancellationToken, progress).ConfigureAwait(false);
             _logger.LogDebug("Processing completed successfully.");
-            var filePath = await exportService.ExportAsync(result, importExportOptions.FilePath, addTimestamp: true);
+            var filePath = await exportService.ExportToExcelAsync(result, importExportOptions.FilePath);
             _logger.LogDebug("Result written successfully.");
         }
     }

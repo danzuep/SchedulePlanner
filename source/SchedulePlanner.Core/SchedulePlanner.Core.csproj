@@ -13,4 +13,10 @@
     <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.3" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="../../LICENSE" LinkBase="Solution Items" Pack="true" />
+    <None Include="../../README.md" LinkBase="Solution Items" Pack="true" />
+    <None Include="../*" LinkBase="Solution Items" />
+  </ItemGroup>
+
 </Project>

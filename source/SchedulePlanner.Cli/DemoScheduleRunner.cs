@@ -4,39 +4,30 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using SchedulePlanner.Core;
 using SchedulePlanner.ImportExport;
 using SchedulePlanner.ImportExport.Excel;
 
-public class DemoScheduleRunner
+public class DemoScheduleRunner : IService<ScheduleResult>
 {
     private readonly ILogger<DemoScheduleRunner> _logger;
+    private readonly SchedulerOptions _options;
 
-    public DemoScheduleRunner(ILogger<DemoScheduleRunner> logger)
+    public DemoScheduleRunner(ILogger<DemoScheduleRunner>? logger = null, IOptions<SchedulerOptions>? options = null)
     {
-        _logger = logger;
+        _options = options?.Value ?? DemoDataFactory.CreateLargeK12SchoolDemo();
+        _logger = logger ?? NullLogger<DemoScheduleRunner>.Instance;
     }
 
-    public async Task<ScheduleResult> RunAsync(SchedulerOptions options = null!)
+    public async Task<ScheduleResult> RunAsync(CancellationToken cancellationToken = default, IProgress<SolverProgress>? progress = null)
     {
-        options ??= DemoDataFactory.CreateLargeK12SchoolDemo();
-
         _logger.LogInformation("Running demo schedule (Large K12 School)...");
 
         // Build a minimal service scope for running the demo
         using var host = Host.CreateDefaultBuilder()
             .ConfigureServices((context, services) =>
-            {
-                services.AddSingleton<ImportExportService>();
-                services.AddSingleton<ExportService>();
-                services.AddSingleton<ImportService>();
-                services.AddSingleton<IConfigValidator, ConfigValidator>();
-                services.AddSingleton<IClassAssignmentBuilder, ClassAssignmentBuilder>();
-                services.AddSingleton<IConstraintBuilder, ConstraintBuilder>();
-                services.AddSingleton<IOptimizationBuilder, OptimizationBuilder>();
-                services.AddSingleton<IResultBuilder, ResultBuilder>();
-                services.AddSingleton<IScheduleLogger, ScheduleLogger>();
-            })
+                services.AddDemoScheduleServices())
             .Build();
 
         using var scope = host.Services.CreateScope();
@@ -48,7 +39,7 @@ public class DemoScheduleRunner
         var scheduleLogger = scope.ServiceProvider.GetRequiredService<IScheduleLogger>();
 
         var service = new SchedulingService(
-            Microsoft.Extensions.Options.Options.Create(options),
+            _options,
             NullLogger<SchedulingService>.Instance,
             configValidator,
             classAssignmentBuilder,
@@ -70,19 +61,27 @@ public class DemoScheduleRunner
             var exportService = scope.ServiceProvider.GetRequiredService<ExportService>();
             var importExportConfig = ImportExportOptions.Default;
 
-            var filePath = await exportService.ExportAsync(result, importExportConfig.FilePath, addTimestamp: true);
-            _logger.LogInformation("Results exported to: {FilePath}", filePath);
+            var exportOptions = new ScheduleResultExportOptions
+            {
+                ScheduleResult = result,
+                FilePath = importExportConfig.FilePath
+            };
 
-            var icalPath = await exportService.ExportToICalAsync(result, importExportConfig.FilePath, addTimestamp: true);
-            _logger.LogInformation("iCal exported to: {ICalPath}", icalPath);
+            var xlsxPath = await exportService.ExportToExcelAsync(exportOptions);
+            _logger.LogInformation("Excel summary written to: {FilePath}", xlsxPath);
 
-            var csvPath = await exportService.ExportToCsvAsync(result, importExportConfig.FilePath, addTimestamp: true);
-            _logger.LogInformation("CSV exported to: {CsvPath}", csvPath);
+            var icalPath = await exportService.ExportToICalAsync(exportOptions);
+            _logger.LogInformation("iCal schedule written to: {FilePath}", icalPath);
+
+            var csvPath = await exportService.ExportToCsvAsync(exportOptions);
+            _logger.LogInformation("CSV summary written to: {FilePath}", csvPath);
         }
         else
         {
-            _logger.LogWarning("No solution found. Status: {Status}. RunDuration: {Duration}ms", result.Status, result.RunDuration?.TotalMilliseconds);
+            _logger.LogWarning("No solution found. Status: {Status}", result.Status);
         }
+
+        _logger.LogInformation("Demo schedule run completed in {Duration}", result.RunDuration);
 
         return result;
     }

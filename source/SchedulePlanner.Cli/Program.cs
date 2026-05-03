@@ -14,55 +14,23 @@ public static partial class Program
     [ExcludeFromCodeCoverage]
     public static async Task Main(string[] args)
     {
-        // Support: dotnet run -- --demo (run demo schedule) or default to import-export
-        if (args.Contains("--demo") || args.Contains("-d"))
-        {
-            await RunDemoScheduleAsync(args);
-            return;
-        }
-
         using var host = Host.CreateDefaultBuilder()
-            .InitialiseBuilderDefaults()
-            .ConfigureServices(Initialise)
-            .Build();
-
-        var service = host.Services.GetRequiredService<ImportExportService>();
-        await service.RunAsync();
-    }
-
-    public static async Task RunDemoScheduleAsync(string[]? args = null)
-    {
-        args ??= Array.Empty<string>();
-        
-        using var host = Host.CreateDefaultBuilder()
-            .InitialiseBuilderDefaults()
-            .ConfigureServices((context, services) =>
-            {
-                Initialise(context, services);
-                services.AddScoped<IService<ScheduleResult>, SchedulingService>();
-                services.AddTransient<ImportService>();
-                services.AddScoped<DemoScheduleRunner>();
-            })
+            .InitialiseBuilderDefaults(args)
             .Build();
 
         using var scope = host.Services.CreateScope();
-        var runner = scope.ServiceProvider.GetRequiredService<DemoScheduleRunner>();
-        await runner.RunAsync();
-    }
-
-    public static void Initialise(HostBuilderContext context, IServiceCollection services)
-    {
-        services.AddSingleton<ImportExportService>();
-        services.AddSingleton<ExportService>();
-        services.AddSingleton<ImportService>();
-
-        // Register scheduling service dependencies for Cli demo runs
-        services.AddSingleton<IConfigValidator, ConfigValidator>();
-        services.AddSingleton<IClassAssignmentBuilder, ClassAssignmentBuilder>();
-        services.AddSingleton<IConstraintBuilder, ConstraintBuilder>();
-        services.AddSingleton<IOptimizationBuilder, OptimizationBuilder>();
-        services.AddSingleton<IResultBuilder, ResultBuilder>();
-        services.AddSingleton<IScheduleLogger, ScheduleLogger>();
+        //var options = scope.ServiceProvider.GetRequiredService<SchedulerOptions>();
+        var runDemo = args.Contains("--demo") || args.Contains("-d");
+        if (runDemo)
+        {
+            var runner = scope.ServiceProvider.GetRequiredService<DemoScheduleRunner>();
+            await runner.RunAsync();
+        }
+        else
+        {
+            var service = scope.ServiceProvider.GetRequiredService<ImportExportService>();
+            await service.RunAsync();
+        }
     }
 
     public static IHostBuilder InitialiseBuilderDefaults(this IHostBuilder builder, params string[] args)
@@ -78,6 +46,7 @@ public static partial class Program
 
         void InitialiseServices(HostBuilderContext context, IServiceCollection services)
         {
+            services.AddDemoScheduleRunner(context.Configuration);
             services.AddSchedulingService(context.Configuration);
             services.AddCsvSchedulerSources(context.Configuration);
             services.AddExcelSchedulerSources(context.Configuration);

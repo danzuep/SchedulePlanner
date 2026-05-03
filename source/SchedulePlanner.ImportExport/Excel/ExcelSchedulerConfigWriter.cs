@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.IO.Abstractions;
 using System.Text;
 using ClosedXML.Excel;
 using SchedulePlanner.Core;
@@ -7,6 +8,13 @@ namespace SchedulePlanner.ImportExport.Excel;
 
 public class ExcelSchedulerConfigWriter
 {
+    private readonly IFileSystem _fileSystem;
+
+    public ExcelSchedulerConfigWriter(IFileSystem? fileSystem = null)
+    {
+        _fileSystem = fileSystem ?? new FileSystem();
+    }
+
     public string WriteScheduleResult(
         ScheduleResult data,
         string filePath,
