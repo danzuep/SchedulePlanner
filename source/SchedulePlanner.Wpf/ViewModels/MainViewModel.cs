@@ -1,9 +1,7 @@
 ﻿using System.IO;
-using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SchedulePlanner.Cli;
@@ -12,7 +10,6 @@ using SchedulePlanner.ImportExport;
 using SchedulePlanner.ImportExport.Excel;
 using SchedulePlanner.Wpf.Helpers;
 using SchedulePlanner.Wpf.Services;
-using SchedulePlanner.Wpf.Views;
 
 namespace SchedulePlanner.Wpf.ViewModels;
 
@@ -29,33 +26,55 @@ public partial class MainViewModel : ObservableObject
         _serviceScopeFactory = serviceScopeFactory;
     }
 
-    [ObservableProperty]
-    private string statusMessage = "Ready.";
+    #region Observable Properties
 
     [ObservableProperty]
-    private string? inputWorkbookPath;
+    private string _statusMessage = "Ready.";
 
     [ObservableProperty]
-    private string? outputWorkbookPath;
+    private string? _inputWorkbookPath;
+
+    [ObservableProperty]
+    private string? _outputWorkbookPath;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsButtonEnabled))]
-    private bool isBusy;
+    [NotifyCanExecuteChangedFor(nameof(ExportWorkbookCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ProcessWorkbookCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RunDemoScheduleCommand))]
+    private bool _isBusy;
 
     [ObservableProperty]
-    private SchedulerOptions? demoOptions;
-    partial void OnDemoOptionsChanged(SchedulerOptions? value)
-    {
-        DemoInfoText = value == null 
-            ? "No demo data generated"
-            : $"{value.Teachers?.Count ?? 0} teachers, {value.Classes?.Count ?? 0} classes, {value.Rooms?.Count ?? 0} rooms";
-        RunDemoScheduleCommand.NotifyCanExecuteChanged();
-    }
+    private double _jobProgress;
 
     [ObservableProperty]
-    private string demoInfoText = "No demo data generated";
+    private string _temporalStatus = "Idle";
+
+    [ObservableProperty]
+    private string _scheduleSummaryText = "Generate or process a schedule to see timeline visualization.";
+
+    [ObservableProperty]
+    private SchedulerOptions? _demoOptions;
+
+    [ObservableProperty]
+    private string _demoInfoText = "No demo data generated";
 
     public bool IsButtonEnabled => !IsBusy;
+
+    #endregion
+
+    #region Partial Methods
+
+    partial void OnDemoOptionsChanged(SchedulerOptions? value)
+    {
+        DemoInfoText = value == null
+            ? "No demo data generated"
+            : $"{value.Teachers?.Count ?? 0} teachers, {value.Classes?.Count ?? 0} classes, {value.Rooms?.Count ?? 0} rooms";
+    }
+
+    #endregion
+
+    #region Commands
 
     [RelayCommand]
     private void BrowseInputWorkbook()
@@ -76,14 +95,14 @@ public partial class MainViewModel : ObservableObject
             OutputWorkbookPath = selected;
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(IsButtonEnabled))]
     private void GenerateLargeK12Demo()
     {
         StatusMessage = "Generating large K12 school demo data...";
         try
         {
             DemoOptions = DemoDataFactory.CreateLargeK12SchoolDemo();
-            StatusMessage = $"Generated demo: {DemoOptions.Teachers.Count} teachers, {DemoOptions.Classes.Count} classes, {DemoOptions.Rooms.Count} rooms.";
+            StatusMessage = $"Generated demo: {DemoOptions.Teachers.Count} teachers, {DemoOptions.Classes.Count} classes.";
         }
         catch (Exception ex)
         {
@@ -92,27 +111,45 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(IsButtonEnabled))]
     private async Task RunDemoSchedule()
     {
         if (DemoOptions == null)
         {
-            // Auto-generate demo data if not already present
             GenerateLargeK12Demo();
             return;
         }
-        //await RunScheduleForOptions(DemoOptions, "Demo");
 
-        using var scope = _serviceScopeFactory.CreateScope();
-        var runner = scope.ServiceProvider.GetRequiredService<DemoScheduleRunner>();
-        await runner.RunAsync(); // SolverProgress
+        try
+        {
+            IsBusy = true;
+            TemporalStatus = "Running Temporal Activity...";
+            StatusMessage = "Solving K-12 Schedule...";
+
+            using var scope = _serviceScopeFactory.CreateScope();
+            var runner = scope.ServiceProvider.GetRequiredService<DemoScheduleRunner>();
+
+            // Note: If DemoScheduleRunner supports IProgress, you would bind it to JobProgress here
+            await runner.RunAsync();
+
+            StatusMessage = "Demo Solve Complete.";
+        }
+        catch (Exception ex)
+        {
+            _dialogService.ShowError("Solve Failed", ex.Message);
+        }
+        finally
+        {
+            IsBusy = false;
+            TemporalStatus = "Completed";
+        }
     }
 
-    [RelayCommand(AllowConcurrentExecutions = false)]
+    [RelayCommand(AllowConcurrentExecutions = false, CanExecute = nameof(IsButtonEnabled))]
     private async Task ExportWorkbookAsync()
     {
-        if (string.IsNullOrWhiteSpace(OutputWorkbookPath))
-            return;
+        if (string.IsNullOrWhiteSpace(OutputWorkbookPath)) return;
+
         try
         {
             IsBusy = true;
@@ -124,7 +161,6 @@ public partial class MainViewModel : ObservableObject
             await service.ExportTemplateAsync(config.Value, OutputWorkbookPath);
 
             StatusMessage = "Export completed successfully.";
-
             _dialogService.ShowMessage("Success", "Export completed successfully.");
         }
         catch (Exception ex)
@@ -132,126 +168,55 @@ public partial class MainViewModel : ObservableObject
             StatusMessage = "Export failed.";
             _dialogService.ShowError("Error", ex.Message);
         }
-        finally
-        {
-            IsBusy = false;
-        }
+        finally { IsBusy = false; }
     }
 
-    [RelayCommand(AllowConcurrentExecutions = false)]
+    [RelayCommand(AllowConcurrentExecutions = false, CanExecute = nameof(IsButtonEnabled))]
     private async Task ProcessWorkbookAsync()
     {
         if (string.IsNullOrWhiteSpace(InputWorkbookPath))
             InputWorkbookPath = Path.GetFullPath(ImportExportOptions.Default.FilePath);
+
         try
         {
             IsBusy = true;
-            StatusMessage = "Processing workbook...";
+            TemporalStatus = "Processing Workflow";
+            StatusMessage = "Processing workbook via Temporal...";
 
-            var options = new ImportExportOptions
-            {
-                FilePath = InputWorkbookPath ?? string.Empty
-            };
+            var options = new ImportExportOptions { FilePath = InputWorkbookPath ?? string.Empty };
 
             using var scope = _serviceScopeFactory.CreateScope();
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<ExcelSchedulerConfigReader>>();
             var inner = scope.ServiceProvider.GetRequiredService<ILogger<SchedulingService>>();
+
             await using var schedulingLogger = new FileLogger<SchedulingService>(options, inner);
             var reader = new ExcelSchedulerConfigReader(options, logger);
             var importService = new ImportService(reader, schedulingLogger);
-            var result = await importService.RunAsync();
 
-            StatusMessage = "Processing completed successfully.";
+            var result = await importService.RunAsync();
 
             var service = scope.ServiceProvider.GetRequiredService<ExportService>();
             var filePath = await service.ExportToExcelAsync(result, options.FilePath);
 
             StatusMessage = "Result written successfully.";
+            UpdateScheduleSummary(result);
 
-            _dialogService.ShowMessage("Success", "Schedule planned successfully." +
-                Environment.NewLine + Environment.NewLine +
-                "Template written to " + filePath);
+            _dialogService.ShowMessage("Success", $"Schedule planned successfully.\n\nTemplate written to {filePath}");
         }
         catch (Exception ex)
         {
             StatusMessage = "Processing failed.";
             _dialogService.ShowError("Error", ex.Message);
         }
-        finally
-        {
-            IsBusy = false;
-        }
+        finally { IsBusy = false; TemporalStatus = "Idle"; }
     }
 
-    private async Task RunScheduleForOptions(SchedulerOptions options, string sourceLabel)
-    {
-        try
-        {
-            IsBusy = true;
-            StatusMessage = $"Running {sourceLabel} schedule...";
-
-            using var scope = _serviceScopeFactory.CreateScope();
-            var logger = scope.ServiceProvider.GetRequiredService<ILogger<SchedulingService>>();
-            var configValidator = scope.ServiceProvider.GetRequiredService<IConfigValidator>();
-            var classAssignmentBuilder = scope.ServiceProvider.GetRequiredService<IClassAssignmentBuilder>();
-            var constraintBuilder = scope.ServiceProvider.GetRequiredService<IConstraintBuilder>();
-            var optimizationBuilder = scope.ServiceProvider.GetRequiredService<IOptimizationBuilder>();
-            var resultBuilder = scope.ServiceProvider.GetRequiredService<IResultBuilder>();
-
-            var service = new SchedulingService(
-                Options.Create(options),
-                logger,
-                configValidator,
-                classAssignmentBuilder,
-                constraintBuilder,
-                optimizationBuilder,
-                resultBuilder,
-                null);
-
-            var result = await service.RunAsync();
-
-            StatusMessage = "Processing completed successfully.";
-
-            var exportService = scope.ServiceProvider.GetRequiredService<ExportService>();
-            var defaultPath = Path.GetFullPath(ImportExportOptions.Default.FilePath);
-            var filePath = await exportService.ExportToExcelAsync(result, defaultPath);
-
-            StatusMessage = "Result written successfully.";
-            _dialogService.ShowMessage("Success", "Schedule planned successfully."
-                + Environment.NewLine + Environment.NewLine
-                + "Template written to " + filePath);
-
-            // Update the schedule timeline display
-            UpdateScheduleSummary(result);
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = "Schedule failed.";
-            _dialogService.ShowError("Error", ex.Message);
-        }
-        finally
-        {
-            IsBusy = false;
-        }
-    }
+    #endregion
 
     private void UpdateScheduleSummary(ScheduleResult result)
     {
-        var summary = result.HasSolution
+        ScheduleSummaryText = result.HasSolution
             ? $"Solution found! {result.TeacherSchedules.Count} teachers, {result.Classes.Count} classes scheduled."
             : $"No solution: {result.Status}";
-
-        var mainView = Application.Current?.Windows.OfType<MainWindow>().FirstOrDefault() as MainWindow;
-        if (mainView != null)
-        {
-            var mainControl = mainView.Content as MainView;
-            if (mainControl != null)
-            {
-                mainControl.Dispatcher.Invoke(() =>
-                {
-                    mainControl.ScheduleSummaryText.Text = summary;
-                });
-            }
-        }
     }
 }

@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using SchedulePlanner.Cli;
 using SchedulePlanner.ImportExport;
 using SchedulePlanner.Wpf.Services;
 using SchedulePlanner.Wpf.ViewModels;
@@ -33,6 +34,7 @@ namespace SchedulePlanner.Wpf
 
             services.AddSchedulingService(configuration);
             services.AddExcelSchedulerSources(configuration);
+            services.AddDemoScheduleRunner(configuration);
             services.AddScoped<ExportService>();
 
             Services = services.BuildServiceProvider();
