@@ -13,7 +13,7 @@ SchedulePlanner is a modern, intelligent classroom scheduling solution designed 
 App Demo:  
 ![Excel](https://raw.githubusercontent.com/danzuep/SchedulePlanner/main/resources/SchedulePlanner-Excel.gif)
 
-[![Download SchedulePlanner](https://gist.github.com/danzuep/1d648d313293b9e75895521caf96d22f/raw/download-compact.svg)](https://github.com/danzuep/SchedulePlanner/releases/download/v0.0.1-23/SchedulePlanner-0.0.1-23.zip)
+[![Download SchedulePlanner](https://gist.github.com/danzuep/1d648d313293b9e75895521caf96d22f/raw/download-compact.svg)](https://github.com/danzuep/SchedulePlanner/releases/download/v0.0.1-62/SchedulePlanner-0.0.1-62.zip)
 
 After downloading, right click, select Properties, then [Unblock](https://github.com/danzuep/SchedulePlanner#download).  
 ![Unblock](https://raw.githubusercontent.com/danzuep/SchedulePlanner/main/resources/SchedulePlanner-Unblock.gif)
