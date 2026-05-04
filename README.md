@@ -2,42 +2,41 @@
 
 [Download SchedulePlanner](https://danzuep.github.io/SchedulePlanner/)
 
-## Overview
+SchedulePlanner is a free tool that helps schools create timetables without conflicts. It automatically schedules classes for teachers, rooms, and students using smart computer algorithms to solve tricky scheduling problems.
 
-SchedulePlanner is a classroom scheduling application that automates the creation of conflict-free timetables for schools. It uses constraint optimization to solve complex scheduling problems involving teachers, rooms, classes, and student schedules.
+## Main Features
 
-## Features
+- Prevents overlaps in teacher, room, or student schedules.
+- Supports traditional daily schedules and longer "block" periods.
+- Allows mixing schedule types per day.
+- Lets multiple teachers share classes.
+- Matches classes to suitable rooms (considering size and sharing).
+- Uses penalties to encourage better schedules (like fewer room changes).
 
-### Core Capabilities
-- **Conflict-free scheduling**: Automatically detects and prevents teacher, room, and student conflicts
-- **Block period support**: Handle traditional daily schedules and block periods with variable lengths
-- **Hybrid schedules**: Mix traditional and block period structures with per-day configuration
-- **Co-teaching support**: Assign multiple teachers to streamed classes
-- **Room optimization**: Match classes to appropriate rooms with capacity and sharing options
-- **Penalty system**: Configurable penalties for room changes, schedule spread, and planning constraints
+## Smart Optimizations
 
-### Scheduling Optimizations
-- Room change minimization
-- Schedule spread reduction (classes distributed across days)
-- Week distribution balancing
-- Class block consistency
-- Common planning time for co-teachers
-- Real-time progress reporting via Temporal heartbeats
+- Minimizes room changes for teachers/students.
+- Spreads classes evenly across days.
+- Balances class distribution over the week.
+- Keeps similar classes together in blocks.
+- Allows planning time for co-teachers.
+- Shows progress updates during scheduling.
 
-### Developer Features
-- OpenTelemetry-compatible diagnostics
-- Extensible constraint and optimization builder pattern
-- OR-Tools CP-SAT solver backend
-- Comprehensive test coverage (62 tests)
-- **Temporal workflow integration** for reliable long-running scheduling with cancellation and progress tracking
+## For Developers
 
-## Usage
+- Includes logging compatible with OpenTelemetry.
+- Uses a flexible design for adding custom rules.
+- Powered by Google's OR-Tools solver.
+- Has 62 tests for reliability.
+- Integrates with Temporal workflows for handling long scheduling tasks with progress tracking and cancellation.
 
-1. **Import data** from Excel (teachers, classes, rooms, student schedules)
-2. **Configure options**: blocks per day, penalties, time limits
-3. **Generate schedule**: Run the solver to create an optimized timetable
-4. **Review results**: View schedule, conflicts, and penalty assessments
-5. **Export**: Save results back to Excel or other formats
+## How to Use
+
+1. Import and edit teacher, class, room, and student data.
+2. Set options like blocks per day, penalties, and time limits.
+3. Run the scheduler to generate a timetable.
+4. Review the schedule, conflicts, and penalties.
+5. Export results to Excel or other formats.
 
 ## Download
 
@@ -48,10 +47,6 @@ App Demo:
 
 After downloading, right click, select Properties, then Unblock.  
 ![Unblock](https://raw.githubusercontent.com/danzuep/SchedulePlanner/main/resources/SchedulePlanner-Unblock.gif)
-
-### Note for Users Without Excel
-
-The software relies on Microsoft Excel, so if you don't have that installed, you can use [LibreOffice](https://www.libreoffice.org/download/download-libreoffice/) as a free alternative to open and edit spreadsheet files.
 
 ---
 
