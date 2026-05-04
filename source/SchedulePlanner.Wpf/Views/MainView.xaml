@@ -34,7 +34,13 @@
 
             <TabItem Header="Configuration">
                 <Grid Margin="15">
-                    <TabControl TabStripPlacement="Left" BorderThickness="1,0,0,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TabControl Grid.Row="1" TabStripPlacement="Left" BorderThickness="1,0,0,0">
                         <TabItem Header="Penalties">
                             <ScrollViewer VerticalScrollBarVisibility="Auto">
                                 <StackPanel Margin="20" MaxWidth="500" HorizontalAlignment="Left">
@@ -76,6 +82,11 @@
                             </DataGrid>
                         </TabItem>
                     </TabControl>
+
+                    <Button Grid.Row="2" Content="Export to Excel" 
+                            Command="{Binding ExportSettingsCommand}" 
+                            HorizontalAlignment="Right" Margin="0,16,0,0" 
+                            Width="150" Height="35"/>
                 </Grid>
             </TabItem>
 
