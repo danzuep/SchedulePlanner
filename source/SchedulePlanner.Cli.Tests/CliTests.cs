@@ -2,6 +2,7 @@ namespace SchedulePlanner.Cli.Tests;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using SchedulePlanner.Cli;
 using SchedulePlanner.Core;
 
@@ -44,7 +45,7 @@ public class CliTests
             {
                 services.AddDemoScheduleServices();
                 services.AddScoped<DemoScheduleRunner>(provider =>
-                    new DemoScheduleRunner(null, useUnsolvableDemo: true, progressTimeout: TimeSpan.FromSeconds(2), disableExports: true)); // Use unsolvable demo with reasonable timeout
+                    new DemoScheduleRunner(null, useUnsolvableDemo: true, progressTimeout: TimeSpan.FromSeconds(1), disableExports: true)); // Use unsolvable demo with reasonable timeout
             })
             .Build();
 
@@ -66,7 +67,7 @@ public class CliTests
         // Verify the solver completed (either found infeasible or timed out)
         await Assert.That(result.RunDuration).IsNotNull();
         // The solver should complete within reasonable time (timeout should prevent runaway execution)
-        await Assert.That(result.RunDuration!.Value).IsLessThan(TimeSpan.FromSeconds(25));
+        await Assert.That(result.RunDuration.Value).IsLessThan(TimeSpan.FromSeconds(25));
     }
 
     [Explicit("This test runs the full demo schedule, which can take a long time. Run explicitly when needed.")]
@@ -75,6 +76,15 @@ public class CliTests
     {
         using var host = Host.CreateDefaultBuilder()
             .InitialiseBuilderDefaults()
+            //.ConfigureServices(services =>
+            //{
+            //    services.AddDemoScheduleServices();
+            //    services.AddScoped<DemoScheduleRunner>(provider =>
+            //        new DemoScheduleRunner(
+            //            provider.GetRequiredService<ILogger<DemoScheduleRunner>>(),
+            //            progressTimeout: TimeSpan.FromSeconds(10),
+            //            disableExports: true));
+            //})
             .Build();
 
         using var scope = host.Services.CreateScope();

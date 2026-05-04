@@ -154,7 +154,10 @@ namespace SchedulePlanner.Core
                 Timestamp: DateTime.UtcNow,
                 Status: "Solving"));
 
-            var solver = CreateSolver(normalized.SolverTimeLimitSeconds);
+            var effectiveTimeLimit = progressTimeout.HasValue
+                ? Math.Min(normalized.SolverTimeLimitSeconds, progressTimeout.Value.TotalSeconds + 1)
+                : normalized.SolverTimeLimitSeconds;
+            var solver = CreateSolver(effectiveTimeLimit);
 
             var status = progress != null
                 ? solver.Solve(context.Model, new ProgressCallback(progress, cancellationToken, _logger, progressTimeout ?? TimeSpan.FromSeconds(60)))
@@ -256,9 +259,12 @@ namespace SchedulePlanner.Core
 
         private static CpSolver CreateSolver(double solverTimeLimitSeconds)
         {
+            var parameters = solverTimeLimitSeconds > 0
+                ? $"max_time_in_seconds:{solverTimeLimitSeconds}"
+                : "max_time_in_seconds:30"; // fallback
             return new CpSolver
             {
-                StringParameters = $"max_time_in_seconds:{solverTimeLimitSeconds}"
+                StringParameters = parameters
             };
         }
 

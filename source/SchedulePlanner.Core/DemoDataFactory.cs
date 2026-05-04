@@ -30,7 +30,7 @@ public static class DemoDataFactory
         {
             rooms.Add(new Room
             {
-                Id = $"{roomType}{roomId}",
+                Id = $"{roomType}{roomId:D2}",
                 Capacity = capacity,
                 EquipmentType = equipment,
                 IsShared = false,
@@ -74,10 +74,10 @@ public static class DemoDataFactory
 
                 teachers.Add(new Teacher
                 {
-                    Id = $"T{teacherId}",
-                    FullName = $"Teacher {teacherId}",
-                    Email = $"teacher{teacherId}@school.edu",
-                    PreferredRoom = "Room1",
+                    Id = $"T{teacherId:D2}",
+                    FullName = $"Teacher {teacherId:D2}",
+                    Email = $"teacher{teacherId:D2}@school.edu",
+                    PreferredRoom = "Room01",
                     Departments = new[] { dept },
                     TargetLoadBlocks = 18 + (teacherId % 3),
                     IsPartTime = false,
@@ -141,7 +141,7 @@ public static class DemoDataFactory
                     string? roomEquipment = equipment ?? "Standard";
 
                     var preferredRoom = rooms
-                        .FirstOrDefault(r => r.EquipmentType == roomEquipment)?.Id ?? "Room1";
+                        .FirstOrDefault(r => r.EquipmentType == roomEquipment)?.Id ?? "Room01";
 
                     classes.Add(new Class
                     {
@@ -354,7 +354,7 @@ public static class DemoDataFactory
          {
              rooms.Add(new Room
              {
-                 Id = $"{roomType}{roomId}",
+                 Id = $"{roomType}{roomId:D2}",
                  Capacity = capacity,
                  EquipmentType = equipment,
                  IsShared = false,
@@ -425,13 +425,13 @@ public static class DemoDataFactory
                      .ToList();
                  var preferredRoom = matchingRooms.Count > 0
                      ? matchingRooms[(teacherId - 1) % matchingRooms.Count].Id
-                     : "Room1";
+                     : "Room01";
 
                  teachers.Add(new Teacher
                  {
-                     Id = $"T{teacherId}",
-                     FullName = $"Teacher {teacherId}",
-                     Email = $"teacher{teacherId}@school.edu",
+                     Id = $"T{teacherId:D2}",
+                     FullName = $"Teacher {teacherId:D2}",
+                     Email = $"teacher{teacherId:D2}@school.edu",
                      PreferredRoom = preferredRoom,
                      Departments = new[] { dept },
                      TargetLoadBlocks = 18 + (teacherId % 5),
@@ -477,7 +477,7 @@ public static class DemoDataFactory
 
                     for (int s = 1; s <= streamCount; s++)
                     {
-                        var streamId = $"{clsKey}-S{s}";
+                        var streamId = $"{clsKey}-S{s:D2}";
                         clsStreams.Add(new ClassStream
                         {
                             Id = streamId,
@@ -524,7 +524,7 @@ public static class DemoDataFactory
                     }
 
                     var preferredRoom = rooms
-                        .FirstOrDefault(r => r.EquipmentType == roomEquipment)?.Id ?? "Room1";
+                        .FirstOrDefault(r => r.EquipmentType == roomEquipment)?.Id ?? "Room01";
 
                     classes.Add(new Class
                     {
@@ -552,7 +552,7 @@ public static class DemoDataFactory
             TeacherDepartments = teacherDepartments,
             ScheduleType = BlockScheduleType.Traditional,
             AllowRoomSharing = true,
-            SolverTimeLimitSeconds = 300,
+            SolverTimeLimitSeconds = 120,
             RoomChangePenalty = 3,
             ScheduleSpreadPenalty = 2,
             WeekDistributionPenalty = 1,
