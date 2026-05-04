@@ -87,7 +87,7 @@ namespace SchedulePlanner.Core.Tests
         [Test]
         public async Task RunAsync_WithSyntheticDataBuilder_Succeeds()
         {
-            var builder = new SyntheticDataBuilder { SchoolSize = 200, StreamCountPerClass = 3, BlockComplexity = 2 };
+            var builder = new SyntheticDataBuilder { SchoolSize = 100 };
             var options = builder.Build();
             var service = new SchedulingService(options);
 

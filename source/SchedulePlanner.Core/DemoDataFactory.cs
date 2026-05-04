@@ -165,7 +165,7 @@ public static class DemoDataFactory
         return CreateDemo(config);
     }
 
-    public static SchedulerOptions CreateLargeHighSchoolDemo()
+    public static SchedulerOptions CreateHighSchoolDemo()
     {
         var config = new DemoConfig
         {

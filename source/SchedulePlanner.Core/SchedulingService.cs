@@ -16,7 +16,7 @@ namespace SchedulePlanner.Core
         Task<T> RunAsync(CancellationToken cancellationToken = default, IProgress<SolverProgress>? progress = null, TimeSpan? progressTimeout = null);
     }
 
-    public sealed class SchedulingService : IService<ScheduleResult>
+    public class SchedulingService : IService<ScheduleResult>
     {
         public SchedulerOptions Config => _config;
 
@@ -49,7 +49,7 @@ namespace SchedulePlanner.Core
             _scheduleLogger = scheduleLogger ?? new ScheduleLogger();
         }
 
-        public Task<ScheduleResult> RunAsync(CancellationToken cancellationToken = default, IProgress<SolverProgress>? progress = null, TimeSpan? progressTimeout = null)
+        public virtual Task<ScheduleResult> RunAsync(CancellationToken cancellationToken = default, IProgress<SolverProgress>? progress = null, TimeSpan? progressTimeout = null)
         {
             var normalized = _configValidator.ValidateAndNormalizeConfig(_config);
 

@@ -12,29 +12,22 @@ public class DemoScheduleRunner : IService<ScheduleResult>
 {
     private readonly ILogger<DemoScheduleRunner> _logger;
     private readonly SchedulerOptions _options;
-    private readonly bool _useSmallDemo;
-    private readonly bool _useUnsolvableDemo;
     private readonly TimeSpan? _progressTimeout;
     private readonly string? _exportFileName;
     private readonly bool _disableExports;
 
-    public DemoScheduleRunner(ILogger<DemoScheduleRunner>? logger = null, bool useSmallDemo = false, bool useUnsolvableDemo = false, TimeSpan? progressTimeout = null, string? exportFileName = null, bool disableExports = false)
+    public DemoScheduleRunner(ILogger<DemoScheduleRunner>? logger = null, TimeSpan? progressTimeout = null, string? exportFileName = null, bool disableExports = false)
     {
-        _options = useSmallDemo ? DemoDataFactory.CreateSmallHighSchoolDemo() :
-                   useUnsolvableDemo ? DemoDataFactory.CreateUnsolvableDemo() :
-                   DemoDataFactory.CreateLargeHighSchoolDemo();
+        _options = DemoDataFactory.CreateHighSchoolDemo();
         _logger = logger ?? NullLogger<DemoScheduleRunner>.Instance;
-        _useSmallDemo = useSmallDemo;
-        _useUnsolvableDemo = useUnsolvableDemo;
         _progressTimeout = progressTimeout ?? TimeSpan.FromSeconds(10);
         _exportFileName = exportFileName;
         _disableExports = disableExports;
     }
 
-    public async Task<ScheduleResult> RunAsync(CancellationToken cancellationToken = default, IProgress<SolverProgress>? progress = null, TimeSpan? progressTimeout = null)
+    public virtual async Task<ScheduleResult> RunAsync(CancellationToken cancellationToken = default, IProgress<SolverProgress>? progress = null, TimeSpan? progressTimeout = null)
     {
-        var demoType = _useUnsolvableDemo ? "Unsolvable" : _useSmallDemo ? "Small" : "Large";
-        _logger.LogInformation("Running demo schedule ({DemoType} K12 School)...", demoType);
+        _logger.LogInformation("Running demo schedule (High School)...");
 
         // Build a minimal service scope for running the demo
         using var host = Host.CreateDefaultBuilder()
