@@ -20,9 +20,9 @@ public class DemoScheduleRunner : IService<ScheduleResult>
 
     public DemoScheduleRunner(ILogger<DemoScheduleRunner>? logger = null, bool useSmallDemo = false, bool useUnsolvableDemo = false, TimeSpan? progressTimeout = null, string? exportFileName = null, bool disableExports = false)
     {
-        _options = useSmallDemo ? DemoDataFactory.CreateSmallK12SchoolDemo() :
+        _options = useSmallDemo ? DemoDataFactory.CreateSmallHighSchoolDemo() :
                    useUnsolvableDemo ? DemoDataFactory.CreateUnsolvableDemo() :
-                   DemoDataFactory.CreateLargeK12SchoolDemo();
+                   DemoDataFactory.CreateLargeHighSchoolDemo();
         _logger = logger ?? NullLogger<DemoScheduleRunner>.Instance;
         _useSmallDemo = useSmallDemo;
         _useUnsolvableDemo = useUnsolvableDemo;

@@ -24,6 +24,43 @@ public partial class MainViewModel : ObservableObject
     // 1. Replaced "Settings" with strongly-typed SchedulerOptions
     [ObservableProperty] private SchedulerOptions _options = new();
 
+    // Demo configuration for customizable demos
+    [ObservableProperty] private DemoConfig _demoConfig = CreateDefaultDemoConfig();
+
+    private static DemoConfig CreateDefaultDemoConfig()
+    {
+        return new DemoConfig
+        {
+            Grades = ["9", "10", "11", "12"],
+            BlocksPerDay = 7,
+            Departments = new List<DeptDefinition>
+            {
+                new("Math", 5, new List<SubjectDefinition>
+                {
+                    new("Algebra", 4, 25, 2),
+                    new("Geometry", 4, 25, 1),
+                    new("Calculus", 5, 20, 1)
+                }),
+                new("Science", 5, new List<SubjectDefinition>
+                {
+                    new("Biology", 4, 25, 1),
+                    new("Chemistry", 5, 20, 1),
+                    new("Physics", 5, 20, 1)
+                }),
+                new("English", 4, new List<SubjectDefinition>
+                {
+                    new("English", 4, 25, 2)
+                })
+            },
+            RoomGroups = new List<RoomDefinition>
+            {
+                new("Classroom", "Standard", 30, 10),
+                new("Lab", "Lab", 25, 3)
+            },
+            SolverTimeLimit = 300
+        };
+    }
+
     // 2. Replaced "Results" with the core ScheduleResult
     [ObservableProperty] private ScheduleResult? _scheduleResult;
 
@@ -156,6 +193,23 @@ public partial class MainViewModel : ObservableObject
             IsBusy = false;
             TemporalStatus = "Idle";
         }
+    }
+
+    [RelayCommand]
+    internal void LoadDemoAsync()
+    {
+        Options = DemoDataFactory.CreateDemo(DemoConfig);
+        Teachers.Clear();
+        foreach (var teacher in Options.Teachers)
+        {
+            Teachers.Add(teacher);
+        }
+        Classes.Clear();
+        foreach (var @class in Options.Classes)
+        {
+            Classes.Add(@class);
+        }
+        StatusMessage = "Demo loaded from config.";
     }
 
     [RelayCommand]

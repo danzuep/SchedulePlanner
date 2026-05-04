@@ -17,7 +17,12 @@ public class CliTests
             {
                 services.AddDemoScheduleServices();
                 services.AddScoped<DemoScheduleRunner>(provider =>
-                    new DemoScheduleRunner(null, useSmallDemo: true, progressTimeout: TimeSpan.FromSeconds(10), disableExports: true)); // Disable exports for testing
+                    new DemoScheduleRunner(
+                        provider.GetRequiredService<ILogger<DemoScheduleRunner>>(),
+                        useSmallDemo: true,
+                        progressTimeout: TimeSpan.FromSeconds(10),
+                        disableExports: true));
+                // Disable exports for testing
             })
             .Build();
 
@@ -45,7 +50,12 @@ public class CliTests
             {
                 services.AddDemoScheduleServices();
                 services.AddScoped<DemoScheduleRunner>(provider =>
-                    new DemoScheduleRunner(null, useUnsolvableDemo: true, progressTimeout: TimeSpan.FromSeconds(1), disableExports: true)); // Use unsolvable demo with reasonable timeout
+                    new DemoScheduleRunner(
+                        provider.GetRequiredService<ILogger<DemoScheduleRunner>>(),
+                        useUnsolvableDemo: true,
+                        progressTimeout: TimeSpan.FromSeconds(1),
+                        disableExports: true));
+                // Use unsolvable demo with reasonable timeout
             })
             .Build();
 
@@ -70,7 +80,7 @@ public class CliTests
         await Assert.That(result.RunDuration.Value).IsLessThan(TimeSpan.FromSeconds(25));
     }
 
-    [Explicit("This test runs the full demo schedule, which can take a long time. Run explicitly when needed.")]
+    //[Explicit("This test runs the full demo schedule, which can take a long time. Run explicitly when needed.")]
     [Test]
     public async Task RunDemoScheduleAsync()
     {
@@ -82,7 +92,7 @@ public class CliTests
             //    services.AddScoped<DemoScheduleRunner>(provider =>
             //        new DemoScheduleRunner(
             //            provider.GetRequiredService<ILogger<DemoScheduleRunner>>(),
-            //            progressTimeout: TimeSpan.FromSeconds(10),
+            //            //progressTimeout: TimeSpan.FromSeconds(30),
             //            disableExports: true));
             //})
             .Build();
