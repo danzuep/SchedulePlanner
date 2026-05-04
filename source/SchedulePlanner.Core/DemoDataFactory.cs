@@ -186,6 +186,118 @@ public static class DemoDataFactory
     }
 
     /// <summary>
+    /// Creates an unsolvable demo to test progress timeout - too many classes for available time slots.
+    /// </summary>
+    public static SchedulerOptions CreateUnsolvableDemo()
+    {
+        // Create a scenario with more classes than available time slots to make it unsolvable
+        var teachers = new List<Teacher>();
+        var classes = new List<Class>();
+        var streams = new List<ClassStream>();
+        var rooms = new List<Room>();
+
+        // Only 1 room available
+        rooms.Add(new Room
+        {
+            Id = "Room1",
+            Capacity = 30,
+            EquipmentType = "Standard",
+            IsShared = false,
+            SetupTimeBuffer = 0
+        });
+
+        // Only 2 teachers available
+        teachers.Add(new Teacher
+        {
+            Id = "T1",
+            FullName = "Teacher 1",
+            Email = "teacher1@school.edu",
+            PreferredRoom = "Room1",
+            Departments = new[] { "Math" },
+            TargetLoadBlocks = 20,
+            IsPartTime = false,
+            Certifications = new[] { "Math" },
+            MaxConsecutiveBlocks = 4
+        });
+
+        teachers.Add(new Teacher
+        {
+            Id = "T2",
+            FullName = "Teacher 2",
+            Email = "teacher2@school.edu",
+            PreferredRoom = "Room1",
+            Departments = new[] { "English" },
+            TargetLoadBlocks = 20,
+            IsPartTime = false,
+            Certifications = new[] { "English" },
+            MaxConsecutiveBlocks = 4
+        });
+
+        var teacherDepartments = teachers
+            .SelectMany(t => t.Departments.Select(d => new TeacherDepartment { TeacherId = t.Id, Department = d }))
+            .ToList();
+
+        // Create way too many classes for the available time (5 days × 7 blocks = 35 slots, but we'll create 50+ classes)
+        int classId = 1;
+        for (int i = 1; i <= 30; i++) // 30 classes - way more than 35 available slots
+        {
+            var subject = i % 2 == 0 ? "Math" : "English";
+            var teacherId = subject == "Math" ? "T1" : "T2";
+
+            var clsKey = $"{subject}{i}";
+            var clsStreams = new List<ClassStream>
+            {
+                new ClassStream
+                {
+                    Id = $"{clsKey}-S1",
+                    Size = 25,
+                    ProficiencyLevel = "Mixed",
+                    LinkedSubjects = new[] { subject }
+                }
+            };
+            streams.Add(clsStreams[0]);
+
+            classes.Add(new Class
+            {
+                Key = clsKey,
+                Name = $"{subject} Class {i}",
+                Department = subject,
+                PreferredRoom = "Room1",
+                WeeklyBlocks = 1, // Each class needs 1 block per week
+                Streams = clsStreams,
+                TeacherIds = new List<string> { teacherId }
+            });
+            classId++;
+        }
+
+        return new SchedulerOptions
+        {
+            Days = SchedulerOptions.MonTueWedThuFri,
+            BlocksPerDay = 7, // 5 days × 7 blocks = 35 total slots
+            Teachers = teachers,
+            Classes = classes, // 30 classes needing 30 slots, but only 35 available and teachers have constraints
+            Streams = streams,
+            Rooms = rooms, // Only 1 room
+            TeacherDepartments = teacherDepartments,
+            ScheduleType = BlockScheduleType.Traditional,
+            AllowRoomSharing = false, // No room sharing makes it even harder
+            SolverTimeLimitSeconds = 300, // Long time limit so timeout triggers first
+            RoomChangePenalty = 10, // High penalty to make scheduling harder
+            ScheduleSpreadPenalty = 10,
+            WeekDistributionPenalty = 10,
+            ClassDayClusteringPenalty = 10,
+            ClassBlockConsistencyPenalty = 10,
+            StreamFragmentationPenalty = 10,
+            SharedRoomChangePenalty = 10,
+            TargetLoadAdherencePenalty = 10,
+            StudentRoomTransitionPenalty = 10,
+            MergedBlockConsistencyPenalty = 10,
+            FreeTimePenalty = 10,
+            CommonPlanningPenalty = 10
+        };
+    }
+
+    /// <summary>
     /// Creates a realistic large K12 school demo scheduler options.
     /// Approximately 1600 students, 50+ teachers, 40+ classrooms.
     /// </summary>

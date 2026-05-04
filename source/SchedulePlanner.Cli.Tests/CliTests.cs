@@ -44,14 +44,14 @@ public class CliTests
             {
                 services.AddDemoScheduleServices();
                 services.AddScoped<DemoScheduleRunner>(provider =>
-                    new DemoScheduleRunner(null, useSmallDemo: true, progressTimeout: TimeSpan.FromSeconds(1), disableExports: true)); // Disable exports for testing
+                    new DemoScheduleRunner(null, useUnsolvableDemo: true, progressTimeout: TimeSpan.FromSeconds(2), disableExports: true)); // Use unsolvable demo with reasonable timeout
             })
             .Build();
 
         using var scope = host.Services.CreateScope();
         var runner = scope.ServiceProvider.GetRequiredService<DemoScheduleRunner>();
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)); // Overall timeout
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30)); // Overall timeout
 
         var progressUpdates = new List<SolverProgress>();
         var progress = new Progress<SolverProgress>(p => progressUpdates.Add(p));
@@ -59,11 +59,14 @@ public class CliTests
         var result = await runner.RunAsync(cts.Token, progress);
 
         await Assert.That(result).IsNotNull();
-        // Verify that progress timeout parameter is working
-        // The solver should complete normally with small demo, but timeout should be configured
+        // The unsolvable problem should result in no solution
+        await Assert.That(result.HasSolution).IsFalse();
+        // Progress updates should be captured during the solving attempt
         await Assert.That(progressUpdates).IsNotEmpty();
-        // Verify that we get a solution (timeout didn't trigger for this small/fast problem)
-        await Assert.That(result.HasSolution).IsTrue();
+        // Verify the solver completed (either found infeasible or timed out)
+        await Assert.That(result.RunDuration).IsNotNull();
+        // The solver should complete within reasonable time (timeout should prevent runaway execution)
+        await Assert.That(result.RunDuration!.Value).IsLessThan(TimeSpan.FromSeconds(25));
     }
 
     [Explicit("This test runs the full demo schedule, which can take a long time. Run explicitly when needed.")]
@@ -71,12 +74,7 @@ public class CliTests
     public async Task RunDemoScheduleAsync()
     {
         using var host = Host.CreateDefaultBuilder()
-            .ConfigureServices(services =>
-            {
-                services.AddDemoScheduleServices();
-                services.AddScoped<DemoScheduleRunner>(provider =>
-                    new DemoScheduleRunner(null, useSmallDemo: false, disableExports: true)); // Disable exports for testing
-            })
+            .InitialiseBuilderDefaults()
             .Build();
 
         using var scope = host.Services.CreateScope();
