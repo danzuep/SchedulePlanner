@@ -12,16 +12,18 @@ public class DemoScheduleRunner : IService<ScheduleResult>
 {
     private readonly ILogger<DemoScheduleRunner> _logger;
     private readonly SchedulerOptions _options;
+    private readonly bool _useSmallDemo;
 
     public DemoScheduleRunner(ILogger<DemoScheduleRunner>? logger = null, bool useSmallDemo = false)
     {
         _options = useSmallDemo ? DemoDataFactory.CreateSmallK12SchoolDemo() : DemoDataFactory.CreateLargeK12SchoolDemo();
         _logger = logger ?? NullLogger<DemoScheduleRunner>.Instance;
+        _useSmallDemo = useSmallDemo;
     }
 
     public async Task<ScheduleResult> RunAsync(CancellationToken cancellationToken = default, IProgress<SolverProgress>? progress = null)
     {
-        _logger.LogInformation("Running demo schedule (Large K12 School)...");
+        _logger.LogInformation("Running demo schedule ({DemoType} K12 School)...", _useSmallDemo ? "Small" : "Large");
 
         // Build a minimal service scope for running the demo
         using var host = Host.CreateDefaultBuilder()
@@ -47,7 +49,7 @@ public class DemoScheduleRunner : IService<ScheduleResult>
             resultBuilder,
             scheduleLogger);
 
-        var result = await service.RunAsync();
+        var result = await service.RunAsync(cancellationToken, progress);
 
         _logger.LogInformation("Solution found: {HasSolution}", result.HasSolution);
         if (result.HasSolution)
