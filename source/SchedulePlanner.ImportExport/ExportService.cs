@@ -19,7 +19,7 @@ namespace SchedulePlanner.ImportExport
             _logger = logger ?? NullLogger<ExportService>.Instance;
         }
 
-        public async Task RunAsync(CancellationToken cancellationToken = default, IProgress<SolverProgress>? progress = null)
+        public async Task RunAsync(CancellationToken cancellationToken = default, IProgress<SolverProgress>? progress = null, TimeSpan? progressTimeout = null)
         {
             var importExportConfig = ImportExportOptions.Default;
             _ = await ExportTemplateAsync(_config, importExportConfig.FilePath).ConfigureAwait(false);

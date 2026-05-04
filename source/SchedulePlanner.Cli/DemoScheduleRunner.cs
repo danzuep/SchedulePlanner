@@ -13,15 +13,21 @@ public class DemoScheduleRunner : IService<ScheduleResult>
     private readonly ILogger<DemoScheduleRunner> _logger;
     private readonly SchedulerOptions _options;
     private readonly bool _useSmallDemo;
+    private readonly TimeSpan? _progressTimeout;
+    private readonly string? _exportFileName;
+    private readonly bool _disableExports;
 
-    public DemoScheduleRunner(ILogger<DemoScheduleRunner>? logger = null, bool useSmallDemo = false)
+    public DemoScheduleRunner(ILogger<DemoScheduleRunner>? logger = null, bool useSmallDemo = false, TimeSpan? progressTimeout = null, string? exportFileName = null, bool disableExports = false)
     {
         _options = useSmallDemo ? DemoDataFactory.CreateSmallK12SchoolDemo() : DemoDataFactory.CreateLargeK12SchoolDemo();
         _logger = logger ?? NullLogger<DemoScheduleRunner>.Instance;
         _useSmallDemo = useSmallDemo;
+        _progressTimeout = progressTimeout;
+        _exportFileName = exportFileName;
+        _disableExports = disableExports;
     }
 
-    public async Task<ScheduleResult> RunAsync(CancellationToken cancellationToken = default, IProgress<SolverProgress>? progress = null)
+    public async Task<ScheduleResult> RunAsync(CancellationToken cancellationToken = default, IProgress<SolverProgress>? progress = null, TimeSpan? progressTimeout = null)
     {
         _logger.LogInformation("Running demo schedule ({DemoType} K12 School)...", _useSmallDemo ? "Small" : "Large");
 
@@ -49,7 +55,7 @@ public class DemoScheduleRunner : IService<ScheduleResult>
             resultBuilder,
             scheduleLogger);
 
-        var result = await service.RunAsync(cancellationToken, progress);
+        var result = await service.RunAsync(cancellationToken, progress, _progressTimeout);
 
         _logger.LogInformation("Solution found: {HasSolution}", result.HasSolution);
         if (result.HasSolution)
@@ -59,23 +65,32 @@ public class DemoScheduleRunner : IService<ScheduleResult>
             if (result.StreamSchedules?.Count > 0)
                 _logger.LogInformation("Stream schedules: {StreamCount}", result.StreamSchedules.Count);
 
-            var exportService = scope.ServiceProvider.GetRequiredService<ExportService>();
-            var importExportConfig = ImportExportOptions.Default;
-
-            var exportOptions = new ScheduleResultExportOptions
+            if (!_disableExports)
             {
-                ScheduleResult = result,
-                FilePath = importExportConfig.FilePath
-            };
+                var exportService = scope.ServiceProvider.GetRequiredService<ExportService>();
+                var importExportConfig = ImportExportOptions.Default;
 
-            var xlsxPath = await exportService.ExportToExcelAsync(exportOptions);
-            _logger.LogInformation("Excel summary written to: {FilePath}", xlsxPath);
+                // Use custom file name if provided to avoid conflicts between concurrent tests
+                if (_exportFileName != null)
+                {
+                    importExportConfig.FileName = _exportFileName;
+                }
 
-            var icalPath = await exportService.ExportToICalAsync(exportOptions);
-            _logger.LogInformation("iCal schedule written to: {FilePath}", icalPath);
+                var exportOptions = new ScheduleResultExportOptions
+                {
+                    ScheduleResult = result,
+                    FilePath = importExportConfig.FilePath
+                };
 
-            var csvPath = await exportService.ExportToCsvAsync(exportOptions);
-            _logger.LogInformation("CSV summary written to: {FilePath}", csvPath);
+                var xlsxPath = await exportService.ExportToExcelAsync(exportOptions);
+                _logger.LogInformation("Excel summary written to: {FilePath}", xlsxPath);
+
+                var icalPath = await exportService.ExportToICalAsync(exportOptions);
+                _logger.LogInformation("iCal schedule written to: {FilePath}", icalPath);
+
+                var csvPath = await exportService.ExportToCsvAsync(exportOptions);
+                _logger.LogInformation("CSV summary written to: {FilePath}", csvPath);
+            }
         }
         else
         {

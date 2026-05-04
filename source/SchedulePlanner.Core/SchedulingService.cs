@@ -8,12 +8,12 @@ namespace SchedulePlanner.Core
 {
     public interface IService
     {
-        Task RunAsync(CancellationToken cancellationToken = default, IProgress<SolverProgress>? progress = null);
+        Task RunAsync(CancellationToken cancellationToken = default, IProgress<SolverProgress>? progress = null, TimeSpan? progressTimeout = null);
     }
 
     public interface IService<T>
     {
-        Task<T> RunAsync(CancellationToken cancellationToken = default, IProgress<SolverProgress>? progress = null);
+        Task<T> RunAsync(CancellationToken cancellationToken = default, IProgress<SolverProgress>? progress = null, TimeSpan? progressTimeout = null);
     }
 
     public sealed class SchedulingService : IService<ScheduleResult>
@@ -49,7 +49,7 @@ namespace SchedulePlanner.Core
             _scheduleLogger = scheduleLogger ?? new ScheduleLogger();
         }
 
-        public Task<ScheduleResult> RunAsync(CancellationToken cancellationToken = default, IProgress<SolverProgress>? progress = null)
+        public Task<ScheduleResult> RunAsync(CancellationToken cancellationToken = default, IProgress<SolverProgress>? progress = null, TimeSpan? progressTimeout = null)
         {
             var normalized = _configValidator.ValidateAndNormalizeConfig(_config);
 
@@ -157,7 +157,7 @@ namespace SchedulePlanner.Core
             var solver = CreateSolver(normalized.SolverTimeLimitSeconds);
 
             var status = progress != null
-                ? solver.Solve(context.Model, new ProgressCallback(progress, cancellationToken, _logger))
+                ? solver.Solve(context.Model, new ProgressCallback(progress, cancellationToken, _logger, progressTimeout ?? TimeSpan.FromSeconds(60)))
                 : solver.Solve(context.Model, new CancellationCallback(cancellationToken));
 
             var result = _resultBuilder.BuildResult(context, variables, penalties, _config, solver, status, stopwatch.Elapsed);
@@ -293,13 +293,19 @@ namespace SchedulePlanner.Core
             private readonly ILogger _logger;
             private int _solutionCount;
             private Stopwatch _stopwatch;
+            private double _bestObjectiveValue;
+            private DateTime _lastImprovementTime;
+            private readonly TimeSpan? _progressTimeout;
 
-            public ProgressCallback(IProgress<SolverProgress> progress, CancellationToken cancellationToken, ILogger logger)
+            public ProgressCallback(IProgress<SolverProgress> progress, CancellationToken cancellationToken, ILogger logger, TimeSpan? progressTimeout = null)
             {
                 _progress = progress;
                 _cancellationToken = cancellationToken;
                 _logger = logger;
                 _stopwatch = Stopwatch.StartNew();
+                _bestObjectiveValue = double.MaxValue;
+                _lastImprovementTime = DateTime.UtcNow;
+                _progressTimeout = progressTimeout;
             }
 
             public override void OnSolutionCallback()
@@ -315,6 +321,25 @@ namespace SchedulePlanner.Core
                 double currentObjective = this.ObjectiveValue();
                 double bestBound = this.BestObjectiveBound();
                 var gap = bestBound - currentObjective;
+
+                // Check for objective improvement
+                bool improved = currentObjective < _bestObjectiveValue;
+                if (improved)
+                {
+                    _bestObjectiveValue = currentObjective;
+                    _lastImprovementTime = DateTime.UtcNow;
+                }
+
+                // Check for progress timeout
+                var timeSinceLastImprovement = DateTime.UtcNow - _lastImprovementTime;
+                if (_progressTimeout.HasValue && timeSinceLastImprovement > _progressTimeout.Value)
+                {
+                    _logger.LogWarning("Solver progress timeout: no improvement for {Timeout}, stopping search. Last objective: {Objective}, gap: {Gap}",
+                        _progressTimeout, currentObjective, gap);
+                    StopSearch();
+                    return;
+                }
+
                 var progressInfo = new SolverProgress(
                     Message: $"Solution {_solutionCount} found (objective: {currentObjective:0.##}, gap: {gap:0.##})",
                     CurrentGap: gap,

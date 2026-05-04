@@ -14,7 +14,7 @@ namespace SchedulePlanner.ImportExport.Excel
             _logger = logger;
         }
 
-        public async Task<ScheduleResult> RunAsync(CancellationToken cancellationToken = default, IProgress<SolverProgress>? progress = null)
+        public async Task<ScheduleResult> RunAsync(CancellationToken cancellationToken = default, IProgress<SolverProgress>? progress = null, TimeSpan? progressTimeout = null)
         {
             var schedulerConfig = await _builder.BuildAsync(cancellationToken).ConfigureAwait(false);
             var schedulingService = new SchedulingService(schedulerConfig, _logger);

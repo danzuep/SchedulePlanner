@@ -17,7 +17,7 @@ namespace SchedulePlanner.ImportExport.Excel
             _logger = logger ?? NullLogger<ImportExportService>.Instance;
         }
 
-        public async Task RunAsync(CancellationToken cancellationToken = default, IProgress<SolverProgress>? progress = null)
+        public async Task RunAsync(CancellationToken cancellationToken = default, IProgress<SolverProgress>? progress = null, TimeSpan? progressTimeout = null)
         {
             using var scope = _serviceScopeFactory.CreateScope();
             var provider = scope.ServiceProvider;
