@@ -158,7 +158,7 @@ namespace SchedulePlanner.Core
 
             var status = progress != null
                 ? solver.Solve(context.Model, new ProgressCallback(progress, cancellationToken, _logger))
-                : solver.Solve(context.Model);
+                : solver.Solve(context.Model, new CancellationCallback(cancellationToken));
 
             var result = _resultBuilder.BuildResult(context, variables, penalties, _config, solver, status, stopwatch.Elapsed);
 
@@ -260,6 +260,27 @@ namespace SchedulePlanner.Core
             {
                 StringParameters = $"max_time_in_seconds:{solverTimeLimitSeconds}"
             };
+        }
+
+        /// <summary>
+        /// Callback for OR-Tools CP-SAT solver to handle cancellation.
+        /// </summary>
+        private sealed class CancellationCallback : CpSolverSolutionCallback
+        {
+            private readonly CancellationToken _cancellationToken;
+
+            public CancellationCallback(CancellationToken cancellationToken)
+            {
+                _cancellationToken = cancellationToken;
+            }
+
+            public override void OnSolutionCallback()
+            {
+                if (_cancellationToken.IsCancellationRequested)
+                {
+                    StopSearch();
+                }
+            }
         }
 
         /// <summary>

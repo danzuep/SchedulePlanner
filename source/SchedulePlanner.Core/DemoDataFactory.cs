@@ -3,6 +3,189 @@ namespace SchedulePlanner.Core;
 public static class DemoDataFactory
 {
     /// <summary>
+    /// Creates a realistic small K12 school demo scheduler options for testing.
+    /// Approximately 200 students, 10 teachers, 8 classrooms.
+    /// </summary>
+    public static SchedulerOptions CreateSmallK12SchoolDemo()
+    {
+        // Small school scenario for testing - grades 9-10
+        var grades = new[] { "9", "10" };
+        var teachers = new List<Teacher>();
+        var classes = new List<Class>();
+        var streams = new List<ClassStream>();
+        var rooms = new List<Room>();
+
+        // Reduced subject configurations
+        var subjectConfigs = new (string Subject, string Dept, int WeeklyBlocks, int ClassSize, int CoursesPerGrade, string? Equipment, bool CoTeaching)[]
+        {
+            ("Math", "Math", 4, 25, 1, null, false),
+            ("English", "English", 4, 25, 1, null, false),
+            ("History", "History", 4, 25, 1, null, false),
+            ("Science", "Science", 4, 20, 1, "ScienceLab", false),
+            ("PE", "PE", 4, 30, 1, "Gym", false),
+        };
+
+        int roomId = 1;
+        void AddRoom(string roomType, string equipment, int capacity)
+        {
+            rooms.Add(new Room
+            {
+                Id = $"{roomType}{roomId}",
+                Capacity = capacity,
+                EquipmentType = equipment,
+                IsShared = false,
+                SetupTimeBuffer = equipment == "ScienceLab" ? 2 : 0
+            });
+            roomId++;
+        }
+
+        // Standard classrooms (6 rooms)
+        for (int i = 1; i <= 6; i++)
+            AddRoom("Room", "Standard", 30);
+
+        // Science labs (1 lab)
+        AddRoom("Lab", "ScienceLab", 20);
+
+        // PE/gym facilities
+        AddRoom("GymA", "Gym", 40);
+
+        // Generate teachers (10 total)
+        int teacherId = 1;
+        string[] allDepts = subjectConfigs.Select(s => s.Dept).Distinct().ToArray();
+
+        foreach (var dept in allDepts)
+        {
+            var deptConfigs = subjectConfigs.Where(s => s.Dept == dept).ToArray();
+            int teachersInDept = dept switch
+            {
+                "Math" => 2,
+                "English" => 2,
+                "Science" => 2,
+                "History" => 2,
+                "PE" => 2,
+                _ => 1
+            };
+
+            for (int t = 1; t <= teachersInDept; t++)
+            {
+                var subjectIndex = (t - 1) % deptConfigs.Length;
+                var specificCourses = new[] { deptConfigs[subjectIndex].Subject };
+                string[] certs = specificCourses;
+
+                teachers.Add(new Teacher
+                {
+                    Id = $"T{teacherId}",
+                    FullName = $"Teacher {teacherId}",
+                    Email = $"teacher{teacherId}@school.edu",
+                    PreferredRoom = "Room1",
+                    Departments = new[] { dept },
+                    TargetLoadBlocks = 18 + (teacherId % 3),
+                    IsPartTime = false,
+                    Certifications = certs,
+                    MaxConsecutiveBlocks = 4
+                });
+                teacherId++;
+            }
+        }
+
+        // Build teacher-department mapping
+        var teacherDepartments = teachers
+            .SelectMany(t => t.Departments.Select(d => new TeacherDepartment { TeacherId = t.Id, Department = d }))
+            .ToList();
+
+        // Build dictionary of teachers by department
+        var teachersByDept = teachers
+            .SelectMany(t => t.Departments.Select(d => new { d, t }))
+            .GroupBy(x => x.d, x => x.t, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.OrderBy(t => t.Id).ToList(), StringComparer.OrdinalIgnoreCase);
+        var nextTeacherIndex = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+        // Generate classes
+        int classId = 1;
+        foreach (var grade in grades)
+        {
+            foreach (var (subject, dept, weeklyBlocks, classSize, coursesPerGrade, equipment, coTeaching) in subjectConfigs)
+            {
+                for (int c = 1; c <= coursesPerGrade; c++)
+                {
+                    var clsKey = $"{subject}{grade}{c}";
+                    var clsStreams = new List<ClassStream>();
+
+                    int streamCount = 1;
+                    int studentsPerStream = classSize;
+
+                    for (int s = 1; s <= streamCount; s++)
+                    {
+                        var streamId = $"{clsKey}-S{s}";
+                        clsStreams.Add(new ClassStream
+                        {
+                            Id = streamId,
+                            Size = studentsPerStream,
+                            ProficiencyLevel = "Mixed",
+                            LinkedSubjects = new[] { subject }
+                        });
+                        streams.Add(clsStreams.Last());
+                    }
+
+                    // Assign teachers
+                    if (!teachersByDept.TryGetValue(dept, out var deptTeachersList) || deptTeachersList.Count == 0)
+                    {
+                        throw new InvalidOperationException($"No teachers found for department '{dept}'.");
+                    }
+
+                    if (!nextTeacherIndex.ContainsKey(dept)) nextTeacherIndex[dept] = 0;
+                    int idx = nextTeacherIndex[dept] % deptTeachersList.Count;
+                    var assignedTeacherIds = new List<string> { deptTeachersList[idx].Id };
+                    nextTeacherIndex[dept] = idx + 1;
+
+                    string? roomEquipment = equipment ?? "Standard";
+
+                    var preferredRoom = rooms
+                        .FirstOrDefault(r => r.EquipmentType == roomEquipment)?.Id ?? "Room1";
+
+                    classes.Add(new Class
+                    {
+                        Key = clsKey,
+                        Name = $"{subject} {grade}.{c}",
+                        Department = dept,
+                        PreferredRoom = preferredRoom,
+                        WeeklyBlocks = weeklyBlocks,
+                        Streams = clsStreams,
+                        TeacherIds = assignedTeacherIds
+                    });
+                    classId++;
+                }
+            }
+        }
+
+        return new SchedulerOptions
+        {
+            Days = SchedulerOptions.MonTueWedThuFri,
+            BlocksPerDay = 7,
+            Teachers = teachers,
+            Classes = classes,
+            Streams = streams,
+            Rooms = rooms,
+            TeacherDepartments = teacherDepartments,
+            ScheduleType = BlockScheduleType.Traditional,
+            AllowRoomSharing = true,
+            SolverTimeLimitSeconds = 30,
+            RoomChangePenalty = 3,
+            ScheduleSpreadPenalty = 2,
+            WeekDistributionPenalty = 1,
+            ClassDayClusteringPenalty = 1,
+            ClassBlockConsistencyPenalty = 1,
+            StreamFragmentationPenalty = 1,
+            SharedRoomChangePenalty = 3,
+            TargetLoadAdherencePenalty = 2,
+            StudentRoomTransitionPenalty = 2,
+            MergedBlockConsistencyPenalty = 1,
+            FreeTimePenalty = 1,
+            CommonPlanningPenalty = 1
+        };
+    }
+
+    /// <summary>
     /// Creates a realistic large K12 school demo scheduler options.
     /// Approximately 1600 students, 50+ teachers, 40+ classrooms.
     /// </summary>
@@ -63,7 +246,7 @@ public static class DemoDataFactory
                  Capacity = capacity,
                  EquipmentType = equipment,
                  IsShared = false,
-                 SetupTimeBuffer = 0
+                 SetupTimeBuffer = equipment == "ScienceLab" || equipment == "ComputerLab" ? 2 : 0
              });
              roomId++;
          }
@@ -139,7 +322,7 @@ public static class DemoDataFactory
                      Email = $"teacher{teacherId}@school.edu",
                      PreferredRoom = preferredRoom,
                      Departments = new[] { dept },
-                     TargetLoadBlocks = 20,
+                     TargetLoadBlocks = 18 + (teacherId % 5),
                      IsPartTime = teacherId % 10 == 0,
                      Certifications = certs,
                      MaxConsecutiveBlocks = 4
@@ -248,8 +431,8 @@ public static class DemoDataFactory
 
         return new SchedulerOptions
         {
-            Days = new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday },
-            BlocksPerDay = 8,
+            Days = SchedulerOptions.MonTueWedThuFri,
+            BlocksPerDay = 9,
             Teachers = teachers,
             Classes = classes,
             Streams = streams,
@@ -258,18 +441,18 @@ public static class DemoDataFactory
             ScheduleType = BlockScheduleType.Traditional,
             AllowRoomSharing = true,
             SolverTimeLimitSeconds = 300,
-            RoomChangePenalty = 0,
-            ScheduleSpreadPenalty = 0,
-            WeekDistributionPenalty = 0,
-            ClassDayClusteringPenalty = 0,
-            ClassBlockConsistencyPenalty = 0,
-            StreamFragmentationPenalty = 0,
-            SharedRoomChangePenalty = 0,
-            TargetLoadAdherencePenalty = 0,
-            StudentRoomTransitionPenalty = 0,
-            MergedBlockConsistencyPenalty = 0,
-            FreeTimePenalty = 0,
-            CommonPlanningPenalty = 0
+            RoomChangePenalty = 3,
+            ScheduleSpreadPenalty = 2,
+            WeekDistributionPenalty = 1,
+            ClassDayClusteringPenalty = 1,
+            ClassBlockConsistencyPenalty = 1,
+            StreamFragmentationPenalty = 1,
+            SharedRoomChangePenalty = 3,
+            TargetLoadAdherencePenalty = 2,
+            StudentRoomTransitionPenalty = 2,
+            MergedBlockConsistencyPenalty = 1,
+            FreeTimePenalty = 1,
+            CommonPlanningPenalty = 1
         };
     }
 }

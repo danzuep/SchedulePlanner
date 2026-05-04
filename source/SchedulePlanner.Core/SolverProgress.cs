@@ -17,7 +17,10 @@ public sealed record SolverProgress(
     double? BestObjective,
     int IterationsCompleted,
     DateTime Timestamp,
-    string? Status = null);
+    string? Status = null)
+{
+    //public DateTime Timestamp => DateTime.UtcNow;
+}
 
 /// <summary>
 /// Interface for reporting solver progress.

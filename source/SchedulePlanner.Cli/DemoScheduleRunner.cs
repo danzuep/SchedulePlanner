@@ -13,9 +13,9 @@ public class DemoScheduleRunner : IService<ScheduleResult>
     private readonly ILogger<DemoScheduleRunner> _logger;
     private readonly SchedulerOptions _options;
 
-    public DemoScheduleRunner(ILogger<DemoScheduleRunner>? logger = null)
+    public DemoScheduleRunner(ILogger<DemoScheduleRunner>? logger = null, bool useSmallDemo = false)
     {
-        _options = DemoDataFactory.CreateLargeK12SchoolDemo();
+        _options = useSmallDemo ? DemoDataFactory.CreateSmallK12SchoolDemo() : DemoDataFactory.CreateLargeK12SchoolDemo();
         _logger = logger ?? NullLogger<DemoScheduleRunner>.Instance;
     }
 

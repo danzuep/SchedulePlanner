@@ -15,7 +15,7 @@
     <RepositoryType>Git</RepositoryType>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <AccelerateBuildsInVisualStudio>true</AccelerateBuildsInVisualStudio>
-    <UseVSTestIfAvailable>false</UseVSTestIfAvailable>
+    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
     <IsTrimmable>false</IsTrimmable>
     <UseMSTest>true</UseMSTest>
   </PropertyGroup>

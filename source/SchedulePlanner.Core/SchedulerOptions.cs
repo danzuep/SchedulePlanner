@@ -54,7 +54,7 @@ using Microsoft.Extensions.Options;
             new PresetBlockConfig(3, "Break", MonTueWed),
             new PresetBlockConfig(0, "Free", [DayOfWeek.Friday])
         };
-        private static readonly IReadOnlyList<DayOfWeek> MonTueWedThuFri =
+        internal static readonly IReadOnlyList<DayOfWeek> MonTueWedThuFri =
         [
             DayOfWeek.Monday,
             DayOfWeek.Tuesday,
