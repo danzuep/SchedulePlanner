@@ -7,10 +7,11 @@
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
         <helpers:IsZeroConverter x:Key="IsZeroConverter" />
+        <helpers:NotBooleanConverter x:Key="NotBooleanConverter" />
     </UserControl.Resources>
 
     <Grid>
-        <TabControl BorderThickness="0,1,0,0">
+        <TabControl BorderThickness="0,1,0,0" Background="Transparent">
             <TabItem Header="Dashboard">
                 <Grid Margin="24">
                     <StackPanel>
@@ -18,54 +19,112 @@
                             <StackPanel>
                                 <TextBlock Text="Solver Status" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10"/>
                                 <TextBlock Text="{Binding StatusMessage}" Foreground="#4B5563" Margin="0,0,0,15"/>
-                                <ProgressBar Height="15" Value="{Binding JobProgress}" Maximum="100" 
-                                             IsIndeterminate="{Binding JobProgress, Converter={StaticResource IsZeroConverter}}"/>
-                                <Button Content="Start Temporal Solve" Command="{Binding RunSolveAsyncCommand}" 
-                                        Margin="0,15,0,0" HorizontalAlignment="Left" Width="200" Style="{StaticResource PrimaryButtonStyle}"/>
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Content="Start Temporal Solve" Command="{Binding RunSolveCommand}" 
+                                            Margin="0,15,0,0" HorizontalAlignment="Left" Width="200" Style="{StaticResource PrimaryButtonStyle}"/>
+                                    <Button Content="Load Demo &amp; Run" Command="{Binding RunDemoCommand}" 
+                                            Margin="15,15,0,0" HorizontalAlignment="Left" Width="200" Style="{StaticResource PrimaryButtonStyle}"
+                                            IsEnabled="{Binding IsBusy, Converter={StaticResource NotBooleanConverter}}"/>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
                     </StackPanel>
                 </Grid>
             </TabItem>
 
-            <TabItem Header="Settings">
-                <Grid Margin="24">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-                    <Border Style="{StaticResource CardStyle}" Padding="10">
-                        <DataGrid ItemsSource="{Binding Settings}" AutoGenerateColumns="False" CanUserAddRows="False" GridLinesVisibility="Horizontal">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="Configuration Key" Binding="{Binding Key}" Width="*" IsReadOnly="True"/>
-                                <DataGridTextColumn Header="Value" Binding="{Binding Value}" Width="150"/>
-                            </DataGrid.Columns>
-                        </DataGrid>
-                    </Border>
-                    <Button Grid.Row="1" Content="Export Settings (XLSX)" Command="{Binding ExportSettingsAsyncCommand}" 
-                            HorizontalAlignment="Right" Margin="0,16,0,0" Width="180" Height="35"/>
+            <TabItem Header="Configuration">
+                <Grid Margin="15">
+                    <TabControl TabStripPlacement="Left" BorderThickness="1,0,0,0">
+                        <TabItem Header="Penalties">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <StackPanel Margin="20" MaxWidth="500" HorizontalAlignment="Left">
+                                    <TextBlock Text="Solver Weightings" FontSize="16" FontWeight="Bold" Margin="0,0,0,20"/>
+
+                                    <TextBlock Text="Room Change Penalty"/>
+                                    <Slider Value="{Binding Options.RoomChangePenalty}" Minimum="0" Maximum="50" TickFrequency="1" IsSnapToTickEnabled="True" Margin="0,5,0,15"/>
+
+                                    <TextBlock Text="Schedule Spread Penalty"/>
+                                    <Slider Value="{Binding Options.ScheduleSpreadPenalty}" Minimum="0" Maximum="50" TickFrequency="1" IsSnapToTickEnabled="True" Margin="0,5,0,15"/>
+
+                                    <TextBlock Text="Solver Time Limit (Seconds)"/>
+                                    <TextBox Text="{Binding Options.SolverTimeLimitSeconds}" Margin="0,5,0,15"/>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </TabItem>
+
+                        <TabItem Header="Teachers">
+                            <DockPanel Margin="10">
+                                <DataGrid ItemsSource="{Binding Teachers}" AutoGenerateColumns="False" CanUserAddRows="True">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="80"/>
+                                        <DataGridTextColumn Header="Full Name" Binding="{Binding FullName}" Width="*"/>
+                                        <DataGridTextColumn Header="Max Consecutive" Binding="{Binding MaxConsecutiveBlocks}" Width="120"/>
+                                        <DataGridCheckBoxColumn Header="Part Time" Binding="{Binding IsPartTime}" Width="80"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </DockPanel>
+                        </TabItem>
+
+                        <TabItem Header="Classes">
+                            <DataGrid Margin="10" ItemsSource="{Binding Classes}" AutoGenerateColumns="False">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Code" Binding="{Binding Key}" Width="100"/>
+                                    <DataGridTextColumn Header="Subject Name" Binding="{Binding Name}" Width="*"/>
+                                    <DataGridTextColumn Header="Dept" Binding="{Binding Department}" Width="150"/>
+                                    <DataGridTextColumn Header="Blocks/Week" Binding="{Binding WeeklyBlocks}" Width="100"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </TabItem>
+                    </TabControl>
                 </Grid>
             </TabItem>
 
-            <TabItem Header="Results">
+            <TabItem Header="Schedule View">
                 <Grid Margin="24">
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
-                    <Border Style="{StaticResource CardStyle}" Padding="10">
-                        <DataGrid ItemsSource="{Binding Results}" AutoGenerateColumns="False" IsReadOnly="True" GridLinesVisibility="All">
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
+                        <TextBlock Text="Select Teacher: " VerticalAlignment="Center" FontWeight="SemiBold"/>
+                        <ComboBox ItemsSource="{Binding ScheduleResult.TeacherSchedules}" 
+                                  SelectedItem="{Binding SelectedTeacherSchedule}"
+                                  DisplayMemberPath="TeacherName"
+                                  Width="250" Margin="10,0,0,0"/>
+                    </StackPanel>
+
+                    <Border Grid.Row="1" Style="{StaticResource CardStyle}" Padding="0">
+                        <DataGrid ItemsSource="{Binding CurrentWeeklyBlocks}" 
+                                  AutoGenerateColumns="False" 
+                                  IsReadOnly="True" 
+                                  HeadersVisibility="Column"
+                                  GridLinesVisibility="All"
+                                  AlternatingRowBackground="#F9FAFB">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="Teacher" Binding="{Binding Teacher}" Width="*"/>
-                                <DataGridTextColumn Header="Class" Binding="{Binding Class}" Width="*"/>
-                                <DataGridTextColumn Header="Room" Binding="{Binding Room}" Width="100"/>
-                                <DataGridTextColumn Header="Day" Binding="{Binding Day}" Width="100"/>
-                                <DataGridTextColumn Header="Block" Binding="{Binding Block}" Width="60"/>
+                                <DataGridTextColumn Header="Period" Binding="{Binding Block.BlockName}" Width="80" IsReadOnly="True">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="FontWeight" Value="Bold"/>
+                                            <Setter Property="Padding" Value="5"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+
+                                <DataGridTextColumn Header="Monday" Binding="{Binding Monday.ClassKey}" Width="*"/>
+                                <DataGridTextColumn Header="Tuesday" Binding="{Binding Tuesday.ClassKey}" Width="*"/>
+                                <DataGridTextColumn Header="Wednesday" Binding="{Binding Wednesday.ClassKey}" Width="*"/>
+                                <DataGridTextColumn Header="Thursday" Binding="{Binding Thursday.ClassKey}" Width="*"/>
+                                <DataGridTextColumn Header="Friday" Binding="{Binding Friday.ClassKey}" Width="*"/>
                             </DataGrid.Columns>
                         </DataGrid>
                     </Border>
-                    <Button Grid.Row="1" Content="Export Results (XLSX)" Command="{Binding ExportResultsAsyncCommand}" 
-                            HorizontalAlignment="Right" Margin="0,16,0,0" Width="180" Height="35"/>
+
+                    <Button Grid.Row="2" Content="Export to Excel" 
+                            Command="{Binding ExportResultsCommand}" 
+                            HorizontalAlignment="Right" Margin="0,16,0,0" 
+                            Width="150" Height="35"/>
                 </Grid>
             </TabItem>
         </TabControl>
@@ -73,8 +132,8 @@
         <Grid Background="#44000000" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}">
             <Border Background="White" VerticalAlignment="Center" HorizontalAlignment="Center" Padding="30" CornerRadius="8">
                 <StackPanel>
-                    <TextBlock Text="{Binding TemporalStatus}" FontWeight="Bold" HorizontalAlignment="Center"/>
-                    <ProgressBar IsIndeterminate="True" Width="200" Height="10" Margin="0,10,0,0"/>
+                    <TextBlock Text="{Binding TemporalStatus}" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,15"/>
+                    <ProgressBar IsIndeterminate="True" Width="220" Height="12"/>
                 </StackPanel>
             </Border>
         </Grid>

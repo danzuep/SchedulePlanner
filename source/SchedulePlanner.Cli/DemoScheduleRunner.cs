@@ -4,7 +4,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using SchedulePlanner.Core;
 using SchedulePlanner.ImportExport;
 using SchedulePlanner.ImportExport.Excel;

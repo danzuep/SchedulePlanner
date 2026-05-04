@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <DefineConstants Condition="'$(MSBuildProjectName.EndsWith(`.wpftmp`))' == 'true'">$(DefineConstants);XAML_BUILD</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>

@@ -18,7 +18,8 @@ public static class ServiceCollectionExtensions
         //services.Configure<SchedulerOptions>(configuration.GetSection(SchedulerOptions.SectionName));
         services.AddDemoScheduleServices();
         services.AddTransient<ImportService>();
-        services.AddScoped<IService<ScheduleResult>, SchedulingService>();
+        services.AddSingleton<SchedulingService>();
+        services.AddSingleton<IService<ScheduleResult>>(provider => provider.GetRequiredService<SchedulingService>());
         services.AddScoped<DemoScheduleRunner>();
         //services.AddSingleton<IService<ScheduleResult>>(provider => provider.GetRequiredService<DemoScheduleRunner>());
         return services;
