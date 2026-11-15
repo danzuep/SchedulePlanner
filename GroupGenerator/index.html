@@ -34,6 +34,19 @@
 <script src="groups.js"></script>
 <script>
   const $ = (id) => document.getElementById(id);
+  const KEY = "group-generator-settings";
+  const fields = ["names", "pairs", "count"];
+  const save = () => {
+    const data = Object.fromEntries(fields.map((f) => [f, $(f).value]));
+    data.mix = $("mix").checked;
+    try { localStorage.setItem(KEY, JSON.stringify(data)); } catch {}
+  };
+  try {
+    const data = JSON.parse(localStorage.getItem(KEY) || "{}");
+    for (const f of fields) if (data[f] !== undefined) $(f).value = data[f];
+    $("mix").checked = !!data.mix;
+  } catch {}
+  for (const id of [...fields, "mix"]) $(id).addEventListener("input", save);
   $("go").onclick = () => {
     $("error").textContent = "";
     $("groups").replaceChildren();

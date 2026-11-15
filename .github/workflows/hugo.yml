@@ -7,9 +7,9 @@ on:
   # Runs on new GitHub releases
   release:
     types: [published]
-  # Runs on pushes targeting the hugo branch
+  # Runs on pushes targeting the hugo or main branch
   push:
-    branches: [hugo]
+    branches: [hugo, main]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -62,6 +62,10 @@ jobs:
           hugo \
             --minify \
             --baseURL "${{ steps.pages.outputs.base_url }}/"
+      - name: Add GroupGenerator at /group-generator/
+        run: |
+          mkdir -p hugo-source/public/group-generator
+          cp GroupGenerator/index.html GroupGenerator/groups.js hugo-source/public/group-generator/
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

@@ -9,3 +9,6 @@ A dependency-free page that splits a list of unique names into groups.
 
 Open `index.html` in a browser (keep `groups.js` beside it). Run tests with `node --test`.
 CI uploads `index.html` and `groups.js` as the `group-generator` artifact.
+
+Settings (names, pairs, group count, gender mix) are saved in the browser's localStorage.
+Published by the Pages workflow at `/group-generator/` on the project site.
