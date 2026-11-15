@@ -11,4 +11,4 @@ Open `index.html` in a browser (keep `groups.js` beside it). Run tests with `nod
 CI uploads `index.html` and `groups.js` as the `group-generator` artifact.
 
 Settings (names, pairs, group count, gender mix) are saved in the browser's localStorage.
-Published to Pages at `/group-generator/` by `group-generator-pages.yml` (keeps the Hugo site).
+Served by GitHub Pages from this branch at `/group-generator/`.
